@@ -1,0 +1,1671 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>イロアテ</title>
+  <style>
+    :root {
+      --bg: #f6f3ee;
+      --card: #ffffff;
+      --text: #1f2933;
+      --muted: #667085;
+      --line: #e7e2da;
+      --primary: #222222;
+      --primary-text: #ffffff;
+      --danger: #ffdddd;
+      --danger-strong: #d92d20;
+      --shadow: 0 18px 45px rgba(31, 41, 51, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      overscroll-behavior: none;
+    }
+
+    button {
+      border: 0;
+      border-radius: 999px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    button:active {
+      transform: translateY(1px);
+    }
+
+    .app {
+      position: relative;
+      min-height: 100vh;
+      min-height: 100dvh;
+      padding: max(18px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-bottom));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .app::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      pointer-events: none;
+      background: rgba(229, 57, 53, 0.28);
+      opacity: 0;
+    }
+
+    body.wrong-flash .app::before {
+      animation: wrongFlash 0.2s ease-in-out;
+    }
+
+    @keyframes wrongFlash {
+      0%, 100% {
+        opacity: 0;
+      }
+      45% {
+        opacity: 1;
+      }
+    }
+
+    .screen {
+      display: none;
+      width: 100%;
+      max-width: 520px;
+    }
+
+    .screen-active {
+      display: block;
+    }
+
+    .hero-card,
+    .panel-card,
+    .question-card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+    }
+
+    .hero-card,
+    .panel-card {
+      padding: 28px 22px;
+      text-align: center;
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin-top: 0;
+    }
+
+    h1 {
+      margin-bottom: 12px;
+      font-size: clamp(3rem, 15vw, 5rem);
+      line-height: 1;
+      letter-spacing: 0.04em;
+    }
+
+    h2 {
+      margin-bottom: 18px;
+      font-size: 2rem;
+    }
+
+    h3 {
+      margin-bottom: 8px;
+      font-size: 1.05rem;
+    }
+
+    .lead {
+      margin: 0 auto 22px;
+      max-width: 340px;
+      color: var(--muted);
+      line-height: 1.8;
+      text-align: center;
+    }
+
+    .best-box {
+      margin: 0 auto 22px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: #f3f4f6;
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    .primary-button,
+    .secondary-button {
+      width: 100%;
+      min-height: 54px;
+      margin-top: 12px;
+      padding: 0 20px;
+    }
+
+
+    .link-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      font: inherit;
+      font-weight: 700;
+      color: var(--text);
+      line-height: normal;
+      text-align: center;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+
+    .primary-button {
+      background: var(--primary);
+      color: var(--primary-text);
+    }
+
+    .secondary-button {
+      background: #ece8df;
+      color: var(--text);
+    }
+
+
+    .countdown-card {
+      min-height: 260px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .countdown-number {
+      margin: 0 0 12px;
+      font-size: clamp(5rem, 28vw, 9rem);
+      line-height: 1;
+      font-weight: 900;
+    }
+
+
+    .name-card {
+      text-align: left;
+    }
+
+    .name-card h2,
+    .name-card .eyebrow,
+    .name-card .lead {
+      text-align: center;
+    }
+
+    .name-label {
+      display: block;
+      margin: 14px 0 8px;
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .name-input {
+      width: 100%;
+      min-height: 54px;
+      padding: 0 16px;
+      border: 2px solid var(--line);
+      border-radius: 16px;
+      background: #ffffff;
+      color: var(--text);
+      font: inherit;
+      font-size: 1.1rem;
+      outline: none;
+    }
+
+    .name-input:focus {
+      border-color: var(--primary);
+    }
+
+    .name-help {
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+
+    .name-error {
+      min-height: 1.5em;
+      margin: 10px 0 0;
+      color: var(--danger-strong);
+      font-weight: 800;
+      text-align: center;
+    }
+
+
+    .debug-error-button {
+      margin-top: 8px;
+    }
+
+    .ranking-status {
+      margin: 12px 0;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: #f3f4f6;
+      color: var(--muted);
+      font-weight: 800;
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    .ranking-summary {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 14px 0;
+    }
+
+    .ranking-summary div {
+      padding: 12px;
+      border-radius: 16px;
+      background: #faf8f4;
+      border: 1px solid var(--line);
+      text-align: left;
+    }
+
+    .ranking-summary span {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 800;
+    }
+
+    .ranking-summary strong {
+      font-size: 1rem;
+    }
+
+    .ranking-best-message {
+      min-height: 1.5em;
+      margin: 10px 0;
+      font-weight: 900;
+      text-align: center;
+    }
+
+    .ranking-panel {
+      margin: 16px 0 8px;
+      padding: 14px;
+      border-radius: 20px;
+      background: #faf8f4;
+      border: 1px solid var(--line);
+    }
+
+    .ranking-tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .ranking-tab {
+      min-height: 42px;
+      padding: 0 10px;
+      border-radius: 999px;
+      background: #ece8df;
+      color: var(--text);
+      font-size: 0.92rem;
+    }
+
+    .ranking-tab-active {
+      background: var(--primary);
+      color: var(--primary-text);
+    }
+
+    .ranking-list {
+      margin: 0;
+      padding-left: 0;
+      list-style: none;
+      text-align: left;
+    }
+
+    .ranking-list li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--line);
+      font-weight: 800;
+    }
+
+    .ranking-list li:last-child {
+      border-bottom: 0;
+    }
+
+    .ranking-rank {
+      flex: 0 0 auto;
+      width: 3.2em;
+      color: var(--muted);
+    }
+
+    .ranking-name {
+      flex: 1 1 auto;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .ranking-score {
+      flex: 0 0 auto;
+      white-space: nowrap;
+    }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: wait;
+      transform: none;
+    }
+
+    .rule-block {
+      margin-bottom: 18px;
+      padding: 16px;
+      border-radius: 18px;
+      background: #faf8f4;
+      text-align: left;
+    }
+
+    .rule-block p {
+      margin-bottom: 0;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .retire-top-button {
+      position: fixed;
+      top: max(12px, env(safe-area-inset-top));
+      right: 12px;
+      z-index: 5;
+      min-height: 38px;
+      padding: 0 14px;
+      background: var(--danger-strong);
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.55);
+      box-shadow: 0 8px 18px rgba(31, 41, 51, 0.16);
+      font-size: 0.86rem;
+    }
+
+    .game-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding-top: 34px;
+    }
+
+    .game-header > div {
+      flex: 1;
+      padding: 14px;
+      border-radius: 18px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      box-shadow: 0 10px 24px rgba(31, 41, 51, 0.08);
+    }
+
+    .small-label {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .game-header strong {
+      font-size: 1.2rem;
+    }
+
+    .question-card {
+      min-height: 250px;
+      margin-bottom: 18px;
+      padding: 26px 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      overflow: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+    }
+
+    .instruction {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 22px;
+      padding: 10px 18px;
+      border-radius: 999px;
+      color: var(--text);
+      background: #f3f4f6;
+      font-size: clamp(1.2rem, 5vw, 1.7rem);
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .instruction[data-type="meaning"] {
+      background: #fff3bf;
+    }
+
+    .instruction[data-type="color"] {
+      background: #dbeafe;
+    }
+
+    .display-word {
+      max-width: 100%;
+      font-size: clamp(3.5rem, 20vw, 7rem);
+      font-weight: 900;
+      line-height: 1;
+      letter-spacing: 0.04em;
+      text-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
+      white-space: nowrap;
+    }
+
+    .color-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+    }
+
+    .color-button {
+      min-width: 0;
+      min-height: 72px;
+      padding: 10px 4px;
+      border: 3px solid rgba(255, 255, 255, 0.72);
+      border-radius: 20px;
+      color: #ffffff;
+      font-size: clamp(0.86rem, 3.8vw, 1rem);
+      line-height: 1;
+      white-space: nowrap;
+      box-shadow: 0 10px 20px rgba(31, 41, 51, 0.16);
+    }
+
+    .color-button[data-color="yellow"],
+    .color-button[data-color="pink"],
+    .color-button[data-color="cyan"] {
+      color: #1f2933;
+    }
+
+    .result-list {
+      margin: 22px 0;
+    }
+
+    .result-list div {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .result-list dt,
+    .result-list dd {
+      margin: 0;
+    }
+
+    .result-list dt {
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .result-list dd {
+      font-weight: 800;
+    }
+
+    .result-list .final-row {
+      padding-top: 16px;
+      border-bottom: 0;
+      font-size: 1.2rem;
+    }
+
+    .best-message {
+      min-height: 1.7em;
+      margin-bottom: 10px;
+      font-weight: 800;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: max(22px, env(safe-area-inset-bottom));
+      z-index: 30;
+      transform: translateX(-50%);
+      width: max-content;
+      max-width: calc(100% - 32px);
+      padding: 12px 18px;
+      border-radius: 999px;
+      background: rgba(31, 41, 51, 0.94);
+      color: #ffffff;
+      font-size: 0.92rem;
+      font-weight: 800;
+      text-align: center;
+      box-shadow: 0 12px 26px rgba(31, 41, 51, 0.24);
+    }
+
+    .toast[hidden] {
+      display: none;
+    }
+
+    @media (max-width: 380px) {
+      .app {
+        padding-left: 12px;
+        padding-right: 12px;
+      }
+
+      .question-card {
+        min-height: 230px;
+        padding-left: 12px;
+        padding-right: 12px;
+      }
+
+      .color-grid {
+        gap: 8px;
+      }
+
+      .color-button {
+        min-height: 64px;
+        border-radius: 16px;
+      }
+
+      .ranking-summary {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app" aria-live="polite">
+    <section id="title-screen" class="screen screen-active">
+      <div class="hero-card">
+        <p class="eyebrow">20問スピード勝負</p>
+        <h1>イロアテ</h1>
+        <p class="lead">文字の意味と文字の色を見分けて<br>正しい色をすばやく選ぶゲームです</p>
+        <div class="best-box" id="title-best-time">ベストタイム：未記録</div>
+        <button class="primary-button" id="start-button">スタート</button>
+        <button class="secondary-button" id="rules-button">ルール説明</button>
+        <button class="secondary-button" id="share-button">このゲームをシェア</button>
+        <a class="secondary-button link-button" id="other-games-link" href="https://chameleonjp.codeberg.page/chameleonjp_lab/">その他のゲーム</a>
+      </div>
+    </section>
+
+    <section id="rules-screen" class="screen">
+      <div class="panel-card">
+        <h2>ルール説明</h2>
+        <div class="rule-block">
+          <h3>【意味】で答える</h3>
+          <p>書かれている色名を選びます。たとえば「あか」が緑色で表示されても、正解は赤です。</p>
+        </div>
+        <div class="rule-block">
+          <h3>【色】で答える</h3>
+          <p>文字そのものに付いている色を選びます。たとえば「きいろ」が赤色で表示されていたら、正解は赤です。</p>
+        </div>
+        <div class="rule-block">
+          <h3>ミスした場合</h3>
+          <p>画面が一瞬赤くなり、最終タイムに5秒が追加されます。正解するまで次の問題には進みません。</p>
+        </div>
+        <div class="rule-block">
+          <h3>記録について</h3>
+          <p>ベストタイムは、このブラウザの中に保存されます。Cookieやキャッシュなどの閲覧データを削除すると、記録が消える場合があります。</p>
+        </div>
+        <button class="primary-button" id="rules-start-button">スタート</button>
+        <button class="secondary-button" id="back-title-button">タイトルへ戻る</button>
+      </div>
+    </section>
+
+
+    <section id="name-screen" class="screen">
+      <div class="panel-card name-card">
+        <p class="eyebrow">ランキング登録名</p>
+        <h2>名前を入力</h2>
+        <p class="lead">ランキングに表示する名前を入れてください</p>
+        <label class="name-label" for="player-name-input">表示名</label>
+        <input id="player-name-input" class="name-input" type="text" maxlength="20" autocomplete="name" inputmode="text" placeholder="20文字まで" />
+        <p class="name-help">絵文字や記号も使えます。次回から同じ名前を使います。</p>
+        <p class="name-error" id="name-error" aria-live="polite"></p>
+        <button class="primary-button" id="name-submit-button">この名前で始める</button>
+        <button class="secondary-button" id="name-back-button">タイトルへ戻る</button>
+      </div>
+    </section>
+
+    <section id="countdown-screen" class="screen">
+      <div class="panel-card countdown-card">
+        <p class="eyebrow">準備</p>
+        <h2 class="countdown-number" id="countdown-number">3</h2>
+        <p class="lead">まもなく開始します</p>
+      </div>
+    </section>
+
+    <section id="game-screen" class="screen">
+      <button class="retire-top-button" id="retire-button" type="button">リタイア</button>
+
+      <div class="game-header">
+        <div>
+          <span class="small-label">問題</span>
+          <strong id="question-count">1 / 20</strong>
+        </div>
+        <div>
+          <span class="small-label">タイム</span>
+          <strong id="timer">0.00秒</strong>
+        </div>
+      </div>
+
+      <div class="question-card">
+        <p class="instruction" id="instruction-text">【意味】で答える</p>
+        <div class="display-word" id="display-word">あか</div>
+      </div>
+
+      <div class="color-grid" id="color-grid" aria-label="色を選ぶ"></div>
+    </section>
+
+    <section id="result-screen" class="screen">
+      <div class="panel-card result-card">
+        <p class="eyebrow">結果</p>
+        <h2 id="result-title">クリア！</h2>
+        <dl class="result-list">
+          <div>
+            <dt>クリアタイム</dt>
+            <dd id="clear-time">0.00秒</dd>
+          </div>
+          <div>
+            <dt>ミス</dt>
+            <dd id="miss-count">0回</dd>
+          </div>
+          <div>
+            <dt>ペナルティ</dt>
+            <dd id="penalty-time">+0秒</dd>
+          </div>
+          <div class="final-row">
+            <dt>最終タイム</dt>
+            <dd id="final-time">0.00秒</dd>
+          </div>
+        </dl>
+        <p class="best-message" id="best-message"></p>
+
+        <div class="ranking-status" id="ranking-status" hidden>ランキング送信中です…</div>
+        <button class="secondary-button debug-error-button" id="copy-ranking-error-button" hidden>確認用エラーをコピー</button>
+
+        <div class="ranking-summary" id="ranking-summary" hidden>
+          <div>
+            <span>今回タイム</span>
+            <strong id="ranking-current-score">--</strong>
+          </div>
+          <div>
+            <span>初回挑戦タイム</span>
+            <strong id="ranking-first-score">--</strong>
+          </div>
+          <div>
+            <span>ベストタイム</span>
+            <strong id="ranking-best-score">--</strong>
+          </div>
+          <div>
+            <span>プレイ回数</span>
+            <strong id="ranking-play-count">--</strong>
+          </div>
+        </div>
+
+        <p class="ranking-best-message" id="ranking-best-message"></p>
+
+        <div class="ranking-panel" id="ranking-panel" hidden>
+          <div class="ranking-tabs" role="tablist" aria-label="ランキング切り替え">
+            <button type="button" class="ranking-tab ranking-tab-active" id="best-ranking-tab">ベスト</button>
+            <button type="button" class="ranking-tab" id="first-ranking-tab">初挑戦</button>
+          </div>
+          <ol class="ranking-list" id="ranking-list"></ol>
+        </div>
+        <button class="primary-button" id="copy-result-button">結果をシェア</button>
+        <button class="primary-button" id="retry-button">もう一度プレイ</button>
+        <button class="secondary-button" id="result-title-button">タイトルへ戻る</button>
+      </div>
+    </section>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden>クリップボードにコピーしました</div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const TOTAL_QUESTIONS = 20;
+    const QUESTIONS_PER_TYPE = 10;
+    const PENALTY_SECONDS = 5;
+    const MAX_CONSECUTIVE_QUESTION_TYPES = 3;
+    const BEST_TIME_STORAGE_KEY = "iroAteBestTime";
+    const PLAYER_NAME_STORAGE_KEY = "iroAtePlayerName";
+    const SUPABASE_URL = "https://mlpnjgezrnhdxsxolyzj.supabase.co";
+    const SUPABASE_PUBLISHABLE_KEY = "ここにPublishable keyを入れる";
+    const GAME_SLUG = "iroate";
+    const CLIENT_VERSION = "iroate-ranking-v1";
+    const PUBLIC_URL = "https://chameleonjp.codeberg.page/iroate/";
+    const GAME_TITLE = "イロアテ";
+    const SCORE_SCALE = 100;
+    const SHARE_TEXT = [
+      `${GAME_TITLE}で遊んでみて！`,
+      PUBLIC_URL
+    ].join("\n");
+
+    const COLORS = [
+      { id: "red", label: "赤", word: "あか", hex: "#e53935" },
+      { id: "blue", label: "青", word: "あお", hex: "#1e88e5" },
+      { id: "green", label: "緑", word: "みどり", hex: "#43a047" },
+      { id: "yellow", label: "黄", word: "きいろ", hex: "#fdd835" },
+      { id: "purple", label: "紫", word: "むらさき", hex: "#8e24aa" },
+      { id: "pink", label: "ピンク", word: "ぴんく", hex: "#ff80ab" },
+      { id: "black", label: "黒", word: "くろ", hex: "#212121" },
+      { id: "cyan", label: "水色", word: "みずいろ", hex: "#4dd0e1" }
+    ];
+
+    const screens = {
+      title: document.getElementById("title-screen"),
+      rules: document.getElementById("rules-screen"),
+      name: document.getElementById("name-screen"),
+      countdown: document.getElementById("countdown-screen"),
+      game: document.getElementById("game-screen"),
+      result: document.getElementById("result-screen")
+    };
+
+    const titleBestTime = document.getElementById("title-best-time");
+    const questionCount = document.getElementById("question-count");
+    const timer = document.getElementById("timer");
+    const countdownNumber = document.getElementById("countdown-number");
+    const instructionText = document.getElementById("instruction-text");
+    const displayWord = document.getElementById("display-word");
+    const colorGrid = document.getElementById("color-grid");
+    const resultTitle = document.getElementById("result-title");
+    const clearTimeText = document.getElementById("clear-time");
+    const missCountText = document.getElementById("miss-count");
+    const penaltyTimeText = document.getElementById("penalty-time");
+    const finalTimeText = document.getElementById("final-time");
+    const bestMessage = document.getElementById("best-message");
+    const toast = document.getElementById("toast");
+    const playerNameInput = document.getElementById("player-name-input");
+    const nameSubmitButton = document.getElementById("name-submit-button");
+    const nameBackButton = document.getElementById("name-back-button");
+    const nameError = document.getElementById("name-error");
+    const rankingStatus = document.getElementById("ranking-status");
+    const copyRankingErrorButton = document.getElementById("copy-ranking-error-button");
+    const rankingSummary = document.getElementById("ranking-summary");
+    const rankingCurrentScore = document.getElementById("ranking-current-score");
+    const rankingFirstScore = document.getElementById("ranking-first-score");
+    const rankingBestScore = document.getElementById("ranking-best-score");
+    const rankingPlayCount = document.getElementById("ranking-play-count");
+    const rankingBestMessage = document.getElementById("ranking-best-message");
+    const rankingPanel = document.getElementById("ranking-panel");
+    const bestRankingTab = document.getElementById("best-ranking-tab");
+    const firstRankingTab = document.getElementById("first-ranking-tab");
+    const rankingList = document.getElementById("ranking-list");
+
+    const startButton = document.getElementById("start-button");
+    const rulesButton = document.getElementById("rules-button");
+    const rulesStartButton = document.getElementById("rules-start-button");
+    const backTitleButton = document.getElementById("back-title-button");
+    const retryButton = document.getElementById("retry-button");
+    const resultTitleButton = document.getElementById("result-title-button");
+    const retireButton = document.getElementById("retire-button");
+    const copyResultButton = document.getElementById("copy-result-button");
+    const shareButton = document.getElementById("share-button");
+
+    let currentQuestions = [];
+    let currentIndex = 0;
+    let missCount = 0;
+    let isAnswerLocked = false;
+    let startTime = 0;
+    let finishedTime = 0;
+    let penaltySeconds = 0;
+    let timerFrameId = null;
+    let isGameActive = false;
+    let toastTimeoutId = null;
+    let countdownTimeoutId = null;
+    let currentPlayerName = "";
+    let scoreSubmitted = false;
+    let supabaseClient = null;
+    let latestResultScore = null;
+    let latestRankingResult = null;
+    let bestRankingRows = [];
+    let firstRankingRows = [];
+    let activeRankingType = "best";
+    let lastRankingErrorText = "";
+
+    function showScreen(screenName) {
+      Object.values(screens).forEach((screen) => {
+        screen.classList.remove("screen-active");
+      });
+      screens[screenName].classList.add("screen-active");
+    }
+
+    function getSavedPlayerName() {
+      try {
+        return (localStorage.getItem(PLAYER_NAME_STORAGE_KEY) || "").trim().slice(0, 20);
+      } catch (_error) {
+        return "";
+      }
+    }
+
+    function savePlayerName(name) {
+      try {
+        localStorage.setItem(PLAYER_NAME_STORAGE_KEY, name);
+      } catch (_error) {
+        console.warn("player name could not be saved");
+      }
+    }
+
+    function beginStartFlow() {
+      stopTimer();
+      clearCountdown();
+      hideToast();
+
+      const savedName = getSavedPlayerName();
+      if (savedName) {
+        currentPlayerName = savedName;
+        startGame();
+        return;
+      }
+
+      nameError.textContent = "";
+      playerNameInput.value = "";
+      showScreen("name");
+
+      window.setTimeout(() => {
+        playerNameInput.focus();
+      }, 80);
+    }
+
+    async function submitPlayerNameAndStart() {
+      const name = playerNameInput.value.trim().slice(0, 20);
+
+      if (!name) {
+        nameError.textContent = "名前を入力してください";
+        playerNameInput.focus();
+        return;
+      }
+
+      currentPlayerName = name;
+      savePlayerName(name);
+      nameError.textContent = "";
+      playerNameInput.blur();
+
+      await waitForViewportToSettle();
+      startGame();
+    }
+
+    function waitForViewportToSettle() {
+      return new Promise((resolve) => {
+        const waitMs = window.visualViewport ? 450 : 250;
+        window.setTimeout(() => {
+          requestAnimationFrame(() => resolve());
+        }, waitMs);
+      });
+    }
+
+    function getSupabaseClient() {
+      if (supabaseClient) {
+        return supabaseClient;
+      }
+
+      if (!window.supabase || typeof window.supabase.createClient !== "function") {
+        throw new Error("Supabase client library is not loaded");
+      }
+
+      if (!SUPABASE_PUBLISHABLE_KEY || SUPABASE_PUBLISHABLE_KEY.includes("ここに")) {
+        throw new Error("Supabase publishable key is not set");
+      }
+
+      supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+      return supabaseClient;
+    }
+
+    function setResultActionsDisabled(isDisabled) {
+      [copyResultButton, retryButton, resultTitleButton].forEach((button) => {
+        button.disabled = isDisabled;
+      });
+    }
+
+    function resetRankingUi() {
+      rankingStatus.hidden = true;
+      rankingStatus.textContent = "";
+      copyRankingErrorButton.hidden = true;
+      lastRankingErrorText = "";
+      rankingSummary.hidden = true;
+      rankingCurrentScore.textContent = "--";
+      rankingFirstScore.textContent = "--";
+      rankingBestScore.textContent = "--";
+      rankingPlayCount.textContent = "--";
+      rankingBestMessage.textContent = "";
+      rankingPanel.hidden = true;
+      rankingList.innerHTML = "";
+      bestRankingRows = [];
+      firstRankingRows = [];
+      latestRankingResult = null;
+      activeRankingType = "best";
+      setRankingTab("best");
+    }
+
+    function setRankingTab(type) {
+      activeRankingType = type;
+      bestRankingTab.classList.toggle("ranking-tab-active", type === "best");
+      firstRankingTab.classList.toggle("ranking-tab-active", type === "first");
+      renderRankingList();
+    }
+
+    function toScoreNumber(value) {
+      const numericValue = Number(value);
+      return Number.isFinite(numericValue) ? numericValue : null;
+    }
+
+    function formatScoreValue(value) {
+      const numericValue = toScoreNumber(value);
+      return numericValue === null ? "--" : `${(numericValue / SCORE_SCALE).toFixed(2)}秒`;
+    }
+
+    function normalizeRpcResult(data) {
+      if (Array.isArray(data)) {
+        return data[0] || null;
+      }
+
+      return data || null;
+    }
+
+
+    function buildRankingErrorText(error) {
+      const safeMessage = error && error.message ? error.message : String(error);
+      const safeCode = error && error.code ? error.code : "";
+      const safeDetails = error && error.details ? error.details : "";
+      const safeHint = error && error.hint ? error.hint : "";
+      const safeStatus = error && error.status ? error.status : "";
+      return [
+        "イロアテ ランキング連携エラー",
+        `message: ${safeMessage}`,
+        safeCode ? `code: ${safeCode}` : "",
+        safeDetails ? `details: ${safeDetails}` : "",
+        safeHint ? `hint: ${safeHint}` : "",
+        safeStatus ? `status: ${safeStatus}` : "",
+        `game_slug: ${GAME_SLUG}`,
+        `client_version: ${CLIENT_VERSION}`,
+        `score_scale: ${SCORE_SCALE}`,
+        "p_score is sent as centiseconds. Example: 26.81 seconds -> 2681"
+        `public_url: ${PUBLIC_URL}`
+      ].filter(Boolean).join("\n");
+    }
+
+    async function syncScoreAndRankings(finalScore) {
+      if (scoreSubmitted) {
+        return;
+      }
+
+      scoreSubmitted = true;
+      renderRankingSummary(finalScore);
+      setResultActionsDisabled(true);
+      rankingStatus.hidden = false;
+      rankingStatus.textContent = "ランキング送信中です…";
+      copyRankingErrorButton.hidden = true;
+
+      try {
+        const client = getSupabaseClient();
+        const { data: submitData, error: submitError } = await client.rpc("submit_score", {
+          p_display_name: currentPlayerName,
+          p_game_slug: GAME_SLUG,
+          p_score: finalScore,
+          p_client_version: CLIENT_VERSION
+        });
+
+        if (submitError) {
+          throw submitError;
+        }
+
+        latestRankingResult = normalizeRpcResult(submitData);
+        renderRankingSummary(finalScore);
+
+        const { data: bestData, error: bestError } = await client.rpc("get_best_score_ranking", {
+          p_game_slug: GAME_SLUG,
+          p_limit: 3
+        });
+
+        if (bestError) {
+          throw bestError;
+        }
+
+        const { data: firstData, error: firstError } = await client.rpc("get_first_try_ranking", {
+          p_game_slug: GAME_SLUG,
+          p_limit: 3
+        });
+
+        if (firstError) {
+          throw firstError;
+        }
+
+        bestRankingRows = Array.isArray(bestData) ? bestData : [];
+        firstRankingRows = Array.isArray(firstData) ? firstData : [];
+
+        rankingStatus.textContent = "ランキングに反映しました";
+        rankingPanel.hidden = false;
+        setRankingTab("best");
+      } catch (error) {
+        console.error("ranking sync failed", error);
+        lastRankingErrorText = buildRankingErrorText(error);
+        try {
+          localStorage.setItem("iroAteRankingLastError", lastRankingErrorText);
+        } catch (_storageError) {
+          console.warn("ranking error could not be saved");
+        }
+        rankingStatus.hidden = false;
+        rankingStatus.textContent = "ランキング連携に失敗しました😅";
+        copyRankingErrorButton.hidden = false;
+        rankingPanel.hidden = true;
+      } finally {
+        setResultActionsDisabled(false);
+      }
+    }
+
+    function renderRankingSummary(finalScore) {
+      rankingSummary.hidden = false;
+      rankingCurrentScore.textContent = formatScoreValue(finalScore);
+
+      if (latestRankingResult) {
+        rankingFirstScore.textContent = formatScoreValue(latestRankingResult.result_first_score);
+        rankingBestScore.textContent = formatScoreValue(latestRankingResult.result_best_score);
+        rankingPlayCount.textContent = latestRankingResult.result_play_count ? `${latestRankingResult.result_play_count}回` : "--";
+
+        if (latestRankingResult.is_first_play) {
+          rankingBestMessage.textContent = "初挑戦スコアを登録しました";
+        } else if (latestRankingResult.is_new_best) {
+          rankingBestMessage.textContent = "自己ベスト更新！";
+        } else {
+          rankingBestMessage.textContent = "今回の記録を送信しました";
+        }
+      } else {
+        rankingFirstScore.textContent = "--";
+        rankingBestScore.textContent = "--";
+        rankingPlayCount.textContent = "--";
+        rankingBestMessage.textContent = "";
+      }
+    }
+
+    function renderRankingList() {
+      if (!rankingList) {
+        return;
+      }
+
+      rankingList.innerHTML = "";
+      const rows = activeRankingType === "best" ? bestRankingRows : firstRankingRows;
+      const scoreKey = activeRankingType === "best" ? "best_score" : "first_score";
+
+      if (!rows.length) {
+        const emptyItem = document.createElement("li");
+        emptyItem.textContent = "まだランキングがありません";
+        rankingList.appendChild(emptyItem);
+        return;
+      }
+
+      rows.forEach((row, index) => {
+        const item = document.createElement("li");
+
+        const rank = document.createElement("span");
+        rank.className = "ranking-rank";
+        rank.textContent = `${row.rank_no || index + 1}位`;
+
+        const name = document.createElement("span");
+        name.className = "ranking-name";
+        name.textContent = row.display_name || "名無し";
+
+        const score = document.createElement("span");
+        score.className = "ranking-score";
+        score.textContent = formatScoreValue(row[scoreKey]);
+
+        item.append(rank, name, score);
+        rankingList.appendChild(item);
+      });
+    }
+
+
+    function formatSeconds(seconds) {
+      return `${seconds.toFixed(2)}秒`;
+    }
+
+    function shuffle(items) {
+      const copiedItems = [...items];
+      for (let i = copiedItems.length - 1; i > 0; i -= 1) {
+        const randomIndex = Math.floor(Math.random() * (i + 1));
+        [copiedItems[i], copiedItems[randomIndex]] = [copiedItems[randomIndex], copiedItems[i]];
+      }
+      return copiedItems;
+    }
+
+    function buildCandidateQuestionPool(type) {
+      const questions = [];
+
+      COLORS.forEach((wordColor) => {
+        COLORS.forEach((textColor) => {
+          if (wordColor.id === textColor.id) {
+            return;
+          }
+
+          const question = {
+            type,
+            instructionText: type === "meaning" ? "【意味】で答える" : "【色】で答える",
+            displayText: wordColor.word,
+            textColorId: textColor.id,
+            textColorHex: textColor.hex,
+            correctColorId: type === "meaning" ? wordColor.id : textColor.id
+          };
+
+          questions.push(question);
+        });
+      });
+
+      return shuffle(questions).slice(0, 50);
+    }
+
+    const QUESTION_POOLS = {
+      meaning: buildCandidateQuestionPool("meaning"),
+      color: buildCandidateQuestionPool("color")
+    };
+
+    function createGameQuestions() {
+      const selectedMeaningQuestions = pickBalancedQuestions(QUESTION_POOLS.meaning, QUESTIONS_PER_TYPE, []);
+      const selectedColorQuestions = pickBalancedQuestions(QUESTION_POOLS.color, QUESTIONS_PER_TYPE, selectedMeaningQuestions);
+
+      return arrangeQuestionsWithLimits([...selectedMeaningQuestions, ...selectedColorQuestions]);
+    }
+
+    function pickBalancedQuestions(pool, count, existingQuestions) {
+      const selectedQuestions = [];
+      const answerCounts = countAnswers(existingQuestions);
+      const shuffledPool = shuffle(pool);
+
+      shuffledPool.forEach((question) => {
+        if (selectedQuestions.length >= count) {
+          return;
+        }
+
+        const currentCount = answerCounts[question.correctColorId] || 0;
+        if (currentCount >= 3) {
+          return;
+        }
+
+        selectedQuestions.push(question);
+        answerCounts[question.correctColorId] = currentCount + 1;
+      });
+
+      if (selectedQuestions.length < count) {
+        shuffledPool.forEach((question) => {
+          if (selectedQuestions.length >= count) {
+            return;
+          }
+
+          if (selectedQuestions.includes(question)) {
+            return;
+          }
+
+          selectedQuestions.push(question);
+        });
+      }
+
+      return selectedQuestions;
+    }
+
+    function countAnswers(questions) {
+      return questions.reduce((counts, question) => {
+        counts[question.correctColorId] = (counts[question.correctColorId] || 0) + 1;
+        return counts;
+      }, {});
+    }
+
+    function arrangeQuestionsWithLimits(questions) {
+      for (let attempt = 0; attempt < 80; attempt += 1) {
+        const arrangedQuestions = buildLimitedQuestionOrder(shuffle(questions));
+        if (arrangedQuestions) {
+          return arrangedQuestions;
+        }
+      }
+
+      return arrangeTypeLimitFallback(questions);
+    }
+
+    function buildLimitedQuestionOrder(questions) {
+      const remainingQuestions = [...questions];
+      const arrangedQuestions = [];
+
+      function backtrack(previousAnswerId = null, previousType = null, typeStreak = 0) {
+        if (remainingQuestions.length === 0) {
+          return true;
+        }
+
+        const candidates = shuffle(remainingQuestions)
+          .filter((question) => {
+            const nextTypeStreak = question.type === previousType ? typeStreak + 1 : 1;
+            return nextTypeStreak <= MAX_CONSECUTIVE_QUESTION_TYPES;
+          })
+          .sort((a, b) => {
+            const aRepeatsAnswer = a.correctColorId === previousAnswerId ? 1 : 0;
+            const bRepeatsAnswer = b.correctColorId === previousAnswerId ? 1 : 0;
+            return aRepeatsAnswer - bRepeatsAnswer;
+          });
+
+        for (const candidate of candidates) {
+          const nextTypeStreak = candidate.type === previousType ? typeStreak + 1 : 1;
+          const questionIndex = remainingQuestions.indexOf(candidate);
+
+          remainingQuestions.splice(questionIndex, 1);
+          arrangedQuestions.push(candidate);
+
+          if (backtrack(candidate.correctColorId, candidate.type, nextTypeStreak)) {
+            return true;
+          }
+
+          arrangedQuestions.pop();
+          remainingQuestions.splice(questionIndex, 0, candidate);
+        }
+
+        return false;
+      }
+
+      return backtrack() ? arrangedQuestions : null;
+    }
+
+    function arrangeTypeLimitFallback(questions) {
+      const remainingQuestions = shuffle(questions);
+      const arrangedQuestions = [];
+
+      while (remainingQuestions.length > 0) {
+        const previousQuestions = arrangedQuestions.slice(-MAX_CONSECUTIVE_QUESTION_TYPES);
+        const blockedType = previousQuestions.length === MAX_CONSECUTIVE_QUESTION_TYPES && previousQuestions.every((question) => question.type === previousQuestions[0].type)
+          ? previousQuestions[0].type
+          : null;
+        const previousQuestion = arrangedQuestions[arrangedQuestions.length - 1];
+        const previousAnswerId = previousQuestion ? previousQuestion.correctColorId : null;
+
+        const nextIndex = remainingQuestions.findIndex((question) => question.type !== blockedType && question.correctColorId !== previousAnswerId);
+        const fallbackIndex = nextIndex === -1
+          ? remainingQuestions.findIndex((question) => question.type !== blockedType)
+          : nextIndex;
+        const safeIndex = fallbackIndex === -1 ? 0 : fallbackIndex;
+        const [nextQuestion] = remainingQuestions.splice(safeIndex, 1);
+
+        arrangedQuestions.push(nextQuestion);
+      }
+
+      return arrangedQuestions;
+    }
+
+    function renderColorButtons() {
+      colorGrid.innerHTML = "";
+
+      COLORS.forEach((color) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "color-button";
+        button.dataset.color = color.id;
+        button.textContent = color.label;
+        button.style.backgroundColor = color.hex;
+        button.setAttribute("aria-label", `${color.label}を選ぶ`);
+        button.addEventListener("click", () => handleAnswer(color.id));
+        colorGrid.appendChild(button);
+      });
+    }
+
+    function getElapsedSeconds() {
+      return (performance.now() - startTime) / 1000;
+    }
+
+    function updateTimer() {
+      const displayedSeconds = getElapsedSeconds() + penaltySeconds;
+      timer.textContent = formatSeconds(displayedSeconds);
+      timerFrameId = requestAnimationFrame(updateTimer);
+    }
+
+    function stopTimer() {
+      if (timerFrameId !== null) {
+        cancelAnimationFrame(timerFrameId);
+        timerFrameId = null;
+      }
+    }
+
+    function clearCountdown() {
+      if (countdownTimeoutId !== null) {
+        clearTimeout(countdownTimeoutId);
+        countdownTimeoutId = null;
+      }
+    }
+
+    function renderQuestion() {
+      const currentQuestion = currentQuestions[currentIndex];
+      questionCount.textContent = `${currentIndex + 1} / ${TOTAL_QUESTIONS}`;
+      instructionText.textContent = currentQuestion.instructionText;
+      instructionText.dataset.type = currentQuestion.type;
+      displayWord.textContent = currentQuestion.displayText;
+      displayWord.style.color = currentQuestion.textColorHex;
+      isAnswerLocked = false;
+    }
+
+    function startGame() {
+      stopTimer();
+      clearCountdown();
+      hideToast();
+      currentQuestions = [];
+      currentIndex = 0;
+      missCount = 0;
+      penaltySeconds = 0;
+      isAnswerLocked = false;
+      finishedTime = 0;
+      latestResultScore = null;
+      scoreSubmitted = false;
+      isGameActive = false;
+      setResultActionsDisabled(false);
+      resetRankingUi();
+      timer.textContent = "0.00秒";
+      questionCount.textContent = "1 / 20";
+      instructionText.textContent = "";
+      displayWord.textContent = "";
+      displayWord.removeAttribute("style");
+      startCountdown();
+    }
+
+    function startCountdown() {
+      let countdownValue = 3;
+      countdownNumber.textContent = String(countdownValue);
+      showScreen("countdown");
+
+      const tick = () => {
+        countdownValue -= 1;
+
+        if (countdownValue <= 0) {
+          countdownTimeoutId = null;
+          startGameAfterCountdown();
+          return;
+        }
+
+        countdownNumber.textContent = String(countdownValue);
+        countdownTimeoutId = window.setTimeout(tick, 1000);
+      };
+
+      countdownTimeoutId = window.setTimeout(tick, 1000);
+    }
+
+    function startGameAfterCountdown() {
+      currentQuestions = createGameQuestions();
+      currentIndex = 0;
+      isGameActive = true;
+      renderQuestion();
+      showScreen("game");
+      startTime = performance.now();
+      timerFrameId = requestAnimationFrame(updateTimer);
+    }
+
+    function flashWrong() {
+      document.body.classList.remove("wrong-flash");
+      void document.body.offsetWidth;
+      document.body.classList.add("wrong-flash");
+    }
+
+    function handleAnswer(selectedColorId) {
+      if (isAnswerLocked || !isGameActive) {
+        return;
+      }
+
+      isAnswerLocked = true;
+      const currentQuestion = currentQuestions[currentIndex];
+
+      if (selectedColorId !== currentQuestion.correctColorId) {
+        missCount += 1;
+        penaltySeconds += PENALTY_SECONDS;
+        flashWrong();
+        isAnswerLocked = false;
+        return;
+      }
+
+      currentIndex += 1;
+
+      if (currentIndex >= TOTAL_QUESTIONS) {
+        finishGame();
+        return;
+      }
+
+      renderQuestion();
+    }
+
+    async function finishGame() {
+      finishedTime = getElapsedSeconds();
+      isGameActive = false;
+      stopTimer();
+
+      const finalSeconds = finishedTime + penaltySeconds;
+      latestResultScore = Math.round(finalSeconds * SCORE_SCALE);
+      const oldBest = getBestTime();
+      const isNewBest = oldBest === null || finalSeconds < oldBest.finalTime;
+
+      if (isNewBest) {
+        saveBestTime({
+          finalTime: finalSeconds,
+          clearTime: finishedTime,
+          missCount,
+          updatedAt: new Date().toISOString()
+        });
+      }
+
+      resultTitle.textContent = isNewBest ? "ベスト更新！" : "クリア！";
+      clearTimeText.textContent = formatSeconds(finishedTime);
+      missCountText.textContent = `${missCount}回`;
+      penaltyTimeText.textContent = `+${penaltySeconds}秒`;
+      finalTimeText.textContent = formatSeconds(finalSeconds);
+      bestMessage.textContent = isNewBest ? "端末内のベストタイムを更新しました。" : getBestMessage(oldBest);
+      updateBestTimeDisplay();
+      resetRankingUi();
+      showScreen("result");
+      await syncScoreAndRankings(latestResultScore);
+    }
+
+    function retireGame() {
+      if (!isGameActive) {
+        return;
+      }
+
+      finishedTime = getElapsedSeconds();
+      isGameActive = false;
+      stopTimer();
+
+      resultTitle.textContent = "リタイア";
+      clearTimeText.textContent = "リタイア";
+      missCountText.textContent = `${missCount}回`;
+      penaltyTimeText.textContent = `+${penaltySeconds}秒`;
+      finalTimeText.textContent = "リタイア";
+      bestMessage.textContent = "リタイアしたため、ベストタイムには反映しません。";
+      resetRankingUi();
+      setResultActionsDisabled(false);
+      updateBestTimeDisplay();
+      showScreen("result");
+    }
+
+    function buildResultCopyText() {
+      if (finalTimeText.textContent === "リタイア") {
+        return [
+          `${GAME_TITLE}をプレイしました`,
+          "結果：リタイア",
+          PUBLIC_URL
+        ].join("\n");
+      }
+
+      const lines = [
+        `${GAME_TITLE}で ${finalTimeText.textContent}！`
+      ];
+
+      if (latestRankingResult) {
+        lines.push(`初回挑戦タイム：${formatScoreValue(latestRankingResult.result_first_score)}`);
+        lines.push(`ベストタイム：${formatScoreValue(latestRankingResult.result_best_score)}`);
+      } else {
+        lines.push(`クリアタイム：${clearTimeText.textContent}`);
+        lines.push(`ミス：${missCountText.textContent}`);
+        lines.push(`ペナルティ：${penaltyTimeText.textContent}`);
+      }
+
+      lines.push(PUBLIC_URL);
+      return lines.join("\n");
+    }
+
+    async function shareOrCopy(text, sharedMessage = "共有しました") {
+      if (navigator.share) {
+        try {
+          await navigator.share({ text });
+          showToast(sharedMessage);
+          return;
+        } catch (error) {
+          if (error && error.name === "AbortError") {
+            return;
+          }
+          console.error("web share failed", error);
+        }
+      }
+
+      await copyTextToClipboard(text);
+    }
+
+    async function copyTextToClipboard(text) {
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch (_error) {
+        fallbackCopyText(text);
+      }
+
+      showToast("クリップボードにコピーしました");
+    }
+
+
+    function copyRankingErrorToClipboard() {
+      const text = lastRankingErrorText || localStorage.getItem("iroAteRankingLastError") || "ランキングエラー情報がありません";
+      copyTextToClipboard(text);
+    }
+
+    function copyResultToClipboard() {
+      shareOrCopy(buildResultCopyText(), "結果を共有しました");
+    }
+
+    function copyShareText() {
+      shareOrCopy(SHARE_TEXT, "ゲームを共有しました");
+    }
+
+    function fallbackCopyText(text) {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.setAttribute("readonly", "");
+      textArea.style.position = "fixed";
+      textArea.style.top = "-9999px";
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textArea);
+    }
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.hidden = false;
+
+      if (toastTimeoutId !== null) {
+        clearTimeout(toastTimeoutId);
+      }
+
+      toastTimeoutId = window.setTimeout(() => {
+        hideToast();
+      }, 1000);
+    }
+
+    function hideToast() {
+      toast.hidden = true;
+
+      if (toastTimeoutId !== null) {
+        clearTimeout(toastTimeoutId);
+        toastTimeoutId = null;
+      }
+    }
+
+    function getBestMessage(best) {
+      if (!best) {
+        return "";
+      }
+
+      return `現在のベスト：${formatSeconds(best.finalTime)}`;
+    }
+
+    function getBestTime() {
+      const savedValue = localStorage.getItem(BEST_TIME_STORAGE_KEY);
+      if (!savedValue) {
+        return null;
+      }
+
+      try {
+        return JSON.parse(savedValue);
+      } catch (_error) {
+        localStorage.removeItem(BEST_TIME_STORAGE_KEY);
+        return null;
+      }
+    }
+
+    function saveBestTime(bestTime) {
+      localStorage.setItem(BEST_TIME_STORAGE_KEY, JSON.stringify(bestTime));
+    }
+
+    function updateBestTimeDisplay() {
+      const best = getBestTime();
+      titleBestTime.textContent = best ? `ベストタイム：${formatSeconds(best.finalTime)}` : "ベストタイム：未記録";
+    }
+
+    startButton.addEventListener("click", beginStartFlow);
+    rulesStartButton.addEventListener("click", beginStartFlow);
+    rulesButton.addEventListener("click", () => showScreen("rules"));
+    backTitleButton.addEventListener("click", () => {
+      clearCountdown();
+      setResultActionsDisabled(false);
+      updateBestTimeDisplay();
+      showScreen("title");
+    });
+    retryButton.addEventListener("click", beginStartFlow);
+    resultTitleButton.addEventListener("click", () => {
+      clearCountdown();
+      hideToast();
+      setResultActionsDisabled(false);
+      updateBestTimeDisplay();
+      showScreen("title");
+    });
+    retireButton.addEventListener("click", retireGame);
+    copyResultButton.addEventListener("click", copyResultToClipboard);
+    shareButton.addEventListener("click", copyShareText);
+    nameSubmitButton.addEventListener("click", submitPlayerNameAndStart);
+    nameBackButton.addEventListener("click", () => {
+      nameError.textContent = "";
+      playerNameInput.blur();
+      showScreen("title");
+    });
+    playerNameInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        submitPlayerNameAndStart();
+      }
+    });
+    bestRankingTab.addEventListener("click", () => setRankingTab("best"));
+    firstRankingTab.addEventListener("click", () => setRankingTab("first"));
+    copyRankingErrorButton.addEventListener("click", copyRankingErrorToClipboard);
+
+    renderColorButtons();
+    updateBestTimeDisplay();
+  </script>
+</body>
+</html>
