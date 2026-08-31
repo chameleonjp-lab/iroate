@@ -1038,7 +1038,7 @@
 
         const { data: bestData, error: bestError } = await client.rpc("get_best_score_ranking", {
           p_game_slug: GAME_SLUG,
-          p_limit: 3
+          p_limit: 10
         });
 
         if (bestError) {
@@ -1047,7 +1047,7 @@
 
         const { data: firstData, error: firstError } = await client.rpc("get_first_try_ranking", {
           p_game_slug: GAME_SLUG,
-          p_limit: 3
+          p_limit: 10
         });
 
         if (firstError) {
