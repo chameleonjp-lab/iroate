@@ -21,10 +21,16 @@
         <h1 data-i18n>イロアテ</h1>
         <p class="lead" data-i18n>文字の意味と文字の色を見分けて、正しい色をすばやく選ぶゲームです</p>
         <div class="best-box" id="title-best-time">ベストタイム：未記録</div>
+        <div class="optional-name">
+          <label class="name-label" for="player-name-input" data-i18n>名前（ランキング参加は任意）</label>
+          <input id="player-name-input" class="name-input" type="text" maxlength="20" autocomplete="nickname" inputmode="text" placeholder="名前なしでも遊べます" aria-describedby="name-help" data-i18n-attrs="placeholder" />
+          <p class="name-help" id="name-help" data-i18n>入力すると名前と記録が公開され、ランキングに参加します。空欄では回数のみ計測します。</p>
+          <p class="name-error" id="name-error" aria-live="polite"></p>
+        </div>
         <button class="primary-button" id="start-button" data-i18n>スタート</button>
         <button class="secondary-button" id="rules-button" data-i18n>ルール説明</button>
         <button class="secondary-button" id="share-button" data-i18n>このゲームをシェア</button>
-        <a class="secondary-button link-button" id="other-games-link" href="https://chameleonjp-lab.github.io/chameleonjp_lab/" data-i18n>その他のゲーム</a>
+        <a class="secondary-button link-button" id="other-games-link" href="https://chameleonjp-lab.github.io/chameleonjp_lab/ranking.html?game=iroate" data-i18n>ランキング詳細</a>
       </div>
     </section>
 
@@ -53,20 +59,6 @@
       </div>
     </section>
 
-
-    <section id="name-screen" class="screen">
-      <div class="panel-card name-card">
-        <p class="eyebrow" data-i18n>ランキング登録名</p>
-        <h2 data-i18n>名前を入力</h2>
-        <p class="lead" data-i18n>ランキングに表示する名前を入れてください</p>
-        <label class="name-label" for="player-name-input" data-i18n>表示名</label>
-        <input id="player-name-input" class="name-input" type="text" maxlength="20" autocomplete="name" inputmode="text" placeholder="20文字まで" data-i18n-attrs="placeholder" />
-        <p class="name-help" data-i18n>絵文字や記号も使えます。次回から同じ名前を使います。</p>
-        <p class="name-error" id="name-error" aria-live="polite"></p>
-        <button class="primary-button" id="name-submit-button" data-i18n>この名前で始める</button>
-        <button class="secondary-button" id="name-back-button" data-i18n>タイトルへ戻る</button>
-      </div>
-    </section>
 
     <section id="countdown-screen" class="screen">
       <div class="panel-card countdown-card">
@@ -121,7 +113,12 @@
           </div>
         </dl>
         <p class="best-message" id="best-message"></p>
+        <button class="primary-button" id="copy-result-button" data-i18n>結果をシェア</button>
+        <button class="primary-button" id="retry-button" data-i18n>もう一度プレイ</button>
+        <button class="secondary-button" id="result-title-button" data-i18n>タイトルへ戻る</button>
 
+
+        <p id="guest-count-status" class="name-help" role="status" hidden></p>
         <div class="ranking-status" id="ranking-status" role="status" hidden>ランキング送信中です…</div>
         <button class="secondary-button debug-error-button" id="copy-ranking-error-button" hidden data-i18n>確認用エラーをコピー</button>
 
@@ -147,15 +144,15 @@
         <p class="ranking-best-message" id="ranking-best-message"></p>
 
         <div class="ranking-panel" id="ranking-panel" hidden>
+          <h3 data-i18n>ランキング上位30名</h3>
           <div class="ranking-tabs" role="tablist" aria-label="ランキング切り替え" data-i18n-attrs="aria-label">
             <button type="button" class="ranking-tab ranking-tab-active" id="best-ranking-tab" data-i18n>ベスト</button>
             <button type="button" class="ranking-tab" id="first-ranking-tab" data-i18n>初挑戦</button>
           </div>
+          <p id="ranking-read-status" role="status"></p>
           <ol class="ranking-list" id="ranking-list"></ol>
+          <a class="secondary-button link-button" id="ranking-detail-link" href="https://chameleonjp-lab.github.io/chameleonjp_lab/ranking.html?game=iroate" data-i18n>ランキング詳細</a>
         </div>
-        <button class="primary-button" id="copy-result-button" data-i18n>結果をシェア</button>
-        <button class="primary-button" id="retry-button" data-i18n>もう一度プレイ</button>
-        <button class="secondary-button" id="result-title-button" data-i18n>タイトルへ戻る</button>
       </div>
     </section>
 

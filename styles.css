@@ -636,3 +636,6 @@ h2 { font-size: clamp(1.4rem, 7vw, 2rem); }
 }
 /* Author display rules (notably the ranking grid) must respect hidden state. */
 [hidden] { display: none !important; }
+.optional-name { text-align: left; margin-bottom: 16px; }
+.optional-name .name-help { margin-top: 8px; }
+#ranking-read-status { color: var(--muted); line-height: 1.5; }

@@ -1,6 +1,19 @@
 // Display text only; never use these strings for answer or score logic.
 export default {
   "messages": {
+    "名前（ランキング参加は任意）": "Ad (sıralama için isteğe bağlı)",
+    "名前なしでも遊べます": "Adsız oynayabilirsiniz",
+    "入力すると名前と記録が公開され、ランキングに参加します。空欄では回数のみ計測します。": "Ad girerseniz adınız ve sonuçlarınız sıralamada herkese açık olur. Boş bırakırsanız yalnızca oyun sayılır.",
+    "名前は20文字以内で入力してください。": "En fazla 20 karakterlik bir ad girin.",
+    "ランキング詳細": "Tam sıralama",
+    "ランキング上位30名": "Sıralama: en iyi 30 oyuncu",
+    "ランキングを読み込んでいます…": "Sıralama yükleniyor…",
+    "ランキングを取得できませんでした。": "Sıralama yüklenemedi.",
+    "名前なしのプレイです。回数のみ計測し、スコアは登録しません。": "Adsız oyun. Yalnızca oyun sayısı kaydedilir; puan gönderilmez.",
+    "プレイ回数を記録しました。": "Oyun sayısı kaydedildi.",
+    "プレイ回数は通信回復後に再送します。": "Bağlantı geri geldiğinde oyun sayısı yeniden gönderilecek.",
+    "プレイ回数を記録できませんでした。": "Oyun sayısı kaydedilemedi.",
+    "プレイ回数を記録中です…": "Oyun sayısı kaydediliyor…",
     "このブラウザには自己ベストを保存できませんでした。": "Kişisel rekorunuz bu tarayıcıya kaydedilemedi.",
     "イロアテ": "Iroate",
     "20問スピード勝負": "20 soruluk hız yarışı",

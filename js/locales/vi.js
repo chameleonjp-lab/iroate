@@ -1,6 +1,19 @@
 // Display text only; never use these strings for answer or score logic.
 export default {
   "messages": {
+    "名前（ランキング参加は任意）": "Tên (tùy chọn, để xếp hạng)",
+    "名前なしでも遊べます": "Có thể chơi không cần tên",
+    "入力すると名前と記録が公開され、ランキングに参加します。空欄では回数のみ計測します。": "Nhập tên sẽ công khai tên và kết quả trên bảng xếp hạng. Để trống nếu chỉ muốn đếm lượt chơi.",
+    "名前は20文字以内で入力してください。": "Vui lòng nhập tên tối đa 20 ký tự.",
+    "ランキング詳細": "Bảng xếp hạng đầy đủ",
+    "ランキング上位30名": "Bảng xếp hạng: 30 người đứng đầu",
+    "ランキングを読み込んでいます…": "Đang tải bảng xếp hạng…",
+    "ランキングを取得できませんでした。": "Không thể tải bảng xếp hạng.",
+    "名前なしのプレイです。回数のみ計測し、スコアは登録しません。": "Chơi không có tên. Chỉ ghi nhận lượt chơi, không gửi điểm.",
+    "プレイ回数を記録しました。": "Đã ghi nhận lượt chơi.",
+    "プレイ回数は通信回復後に再送します。": "Sẽ gửi lại lượt chơi khi có kết nối.",
+    "プレイ回数を記録できませんでした。": "Không thể ghi nhận lượt chơi.",
+    "プレイ回数を記録中です…": "Đang ghi nhận lượt chơi…",
     "このブラウザには自己ベストを保存できませんでした。": "Không thể lưu kỷ lục cá nhân trong trình duyệt này.",
     "イロアテ": "Iroate",
     "20問スピード勝負": "Thử thách tốc độ 20 câu",

@@ -4,8 +4,9 @@ import {COLORS} from '../../js/engine.js';
 import {colorName, translate, LANGUAGE_STORAGE_KEY} from '../../js/i18n.js';
 const rgb = hex => `rgb(${[1,3,5].map(n=>parseInt(hex.slice(n,n+2),16)).join(', ')})`;
 
-async function setup(page,{failure=false,delay=false,storageBlocked=false,audioBlocked=false}={}) {
-  const errors=[],submissions=[], pending=[];
+async function setup(page,{failure=false,delay=false,storageBlocked=false,audioBlocked=false,rows=2,guestFailure=false,invalidAck=false,readFailure=false,namedRejected=false}={}) {
+  const errors=[],submissions=[], pending=[],guestStarts=[],reads=[];
+  const network={guestFailure};
   page.on('pageerror',e=>errors.push(e.message));
   await page.addInitScript(({storageBlocked,audioBlocked})=>{
     if(storageBlocked) Object.defineProperty(window,'localStorage',{get(){throw new Error('blocked')}});
@@ -21,30 +22,31 @@ async function setup(page,{failure=false,delay=false,storageBlocked=false,audioB
     if(url.hostname==='127.0.0.1') return route.continue();
     if(!url.pathname.includes('/rest/v1/rpc/')) return route.abort();
     const method=url.pathname.split('/').pop();
+    if(method==='start_iroate_guest_play_v1') {
+      const body=route.request().postDataJSON();guestStarts.push(body);
+      if(network.guestFailure)return route.fulfill({status:503,json:{message:'offline'}});
+      return route.fulfill({json:{accepted:!invalidAck,start_id:body.p_start_id,game_slug:'iroate',client_version:'iroate-ranking-v1',play_id:'30000000-0000-4000-8000-000000000001'}});
+    }
     if(method==='submit_score') {
       const body=route.request().postDataJSON();submissions.push(body);
       if(delay) await new Promise(r=>pending.push(r));
       if(failure) return route.fulfill({status:500,json:{message:'offline',code:'TEST'}});
-      return route.fulfill({json:[{accepted:true,result_display_name:body.p_display_name,result_first_score:3000,result_best_score:body.p_score,result_play_count:3,is_first_play:false,is_new_best:true}]});
+      return route.fulfill({json:[{accepted:!namedRejected,result_display_name:body.p_display_name,result_first_score:3000,result_best_score:body.p_score,result_play_count:3,is_first_play:false,is_new_best:true}]});
     }
-    return route.fulfill({json:[{rank_no:1,display_name:'Player',best_score:2000,first_score:3000,play_count:3},{rank_no:1,display_name:'Peer',best_score:2000,first_score:3000,play_count:1}]});
+    reads.push({method,...route.request().postDataJSON()});
+    if(readFailure)return route.fulfill({status:500,json:{message:'ranking unavailable'}});
+    return route.fulfill({json:Array.from({length:rows},(_,i)=>({rank_no:i<2?1:i+1,display_name:i===0?'Player':i===1?'Peer':`Player${i+1}`,best_score:2000+i,first_score:3000+i,play_count:3}))});
   });
   await page.clock.install();
   await page.goto('./');
-  return {errors,submissions,pending};
+  return {errors,submissions,pending,guestStarts,reads,network};
 }
 
-async function start(page,{saved=false}={}) {
+async function start(page,{name='Player'}={}) {
+  await page.locator('#player-name-input').fill(name);
+  await translated(page, await page.locator('html').getAttribute('lang'));
+  await noOverflow(page);
   await page.locator('#start-button').click();
-  if(!saved) {
-    await translated(page, await page.locator('html').getAttribute('lang'));
-    await noOverflow(page);
-    await page.locator('#name-submit-button').click();
-    await expect(page.locator('#name-error')).not.toBeEmpty();
-    await page.locator('#player-name-input').fill('Player');
-    await page.locator('#name-submit-button').click();
-    await page.clock.runFor(600);
-  }
   await expect(page.locator('#language-select')).toBeDisabled();
   await translated(page, await page.locator('html').getAttribute('lang'));
   await page.clock.runFor(3100);
@@ -151,6 +153,7 @@ test('communication failure: error builder runs, results/retry survive; no real 
   await page.locator('#language-select').selectOption('en');
   await start(page);await complete(page,'en');
   await expect(page.locator('#copy-ranking-error-button')).toBeVisible();
+  await expect(page.locator('#ranking-list li')).toHaveCount(2);
   await expect(page.locator('#retry-button')).toBeEnabled();
   const diagnostic=await page.evaluate(()=>localStorage.getItem('iroAteRankingLastError'));
   expect(diagnostic).toContain('score_scale: 100');
@@ -223,4 +226,89 @@ test('SE wiring: one event per action, gesture unlock, finish sequence and immed
   await page.locator('#retire-button').click();
   expect(await page.evaluate(()=>window.__sounds.filter(s=>s.event==='retire').length)).toBe(1);
   expect(f.errors).toEqual([]);
+});
+
+
+test('optional-name home and detail-ranking link',async({page})=>{
+  await setup(page);
+  await expect(page.locator('#title-screen #player-name-input')).toBeVisible();
+  await expect(page.locator('#other-games-link')).toHaveAttribute('href','https://chameleonjp-lab.github.io/chameleonjp_lab/ranking.html?game=iroate');
+  await page.locator('#start-button').click();
+  await expect(page.locator('#countdown-screen')).toBeVisible();
+});
+
+
+for(const {id:lang} of SUPPORTED_LANGUAGES) test(`${lang}: anonymous start/retire counted, top 30 and detail link`,async({page})=>{
+  const f=await setup(page,{rows:40});
+  await page.locator('#language-select').selectOption(lang);
+  await start(page,{name:'   '});
+  await expect.poll(()=>f.guestStarts.length).toBe(1);
+  expect(f.guestStarts[0]).toMatchObject({p_game_slug:'iroate',p_client_version:'iroate-ranking-v1'});
+  expect(Object.keys(f.guestStarts[0]).sort()).toEqual(['p_client_version','p_game_slug','p_start_id']);
+  await page.locator('#retire-button').click();
+  await expect(page.locator('#guest-count-status')).toHaveText(translate('プレイ回数を記録しました。',{},lang));
+  await expect(page.locator('#ranking-list li')).toHaveCount(30);
+  expect(f.reads.every(r=>r.p_limit===30&&r.p_game_slug==='iroate')).toBe(true);
+  await expect(page.locator('#ranking-detail-link')).toHaveAttribute('href','https://chameleonjp-lab.github.io/chameleonjp_lab/ranking.html?game=iroate');
+  await translated(page,lang);await noOverflow(page);
+  expect(f.submissions).toHaveLength(0);
+  await page.locator('#retry-button').click();await page.clock.runFor(3100);
+  await expect.poll(()=>f.guestStarts.length).toBe(2);
+  expect(f.guestStarts[0].p_start_id).not.toBe(f.guestStarts[1].p_start_id);
+  expect(f.errors).toEqual([]);
+});
+
+test('anonymous clear never submits a score; clearing saved name opts out on later visits',async({page})=>{
+  const f=await setup(page,{rows:40});
+  await page.evaluate(()=>localStorage.setItem('iroAtePlayerName','Existing'));
+  await page.reload();
+  await expect(page.locator('#player-name-input')).toHaveValue('Existing');
+  await start(page,{name:''});
+  // A late edit of the hidden input does not enroll an anonymous round.
+  await page.locator('#player-name-input').evaluate(el=>{el.value='LateName'});
+  await complete(page,'en');
+  await expect(page.locator('#ranking-list li')).toHaveCount(30);
+  await expect(page.locator('#ranking-summary')).toBeHidden();
+  expect(f.submissions).toHaveLength(0);expect(f.guestStarts).toHaveLength(1);
+  expect(await page.evaluate(()=>localStorage.getItem('iroAtePlayerName'))).toBe('');
+  await page.reload();await expect(page.locator('#player-name-input')).toHaveValue('');
+});
+
+test('anonymous count retries the same ID after offline failure while game and result stay usable',async({page})=>{
+  const f=await setup(page,{guestFailure:true});
+  await start(page,{name:''});
+  await expect.poll(()=>f.guestStarts.length).toBe(1);
+  await page.locator('#retire-button').click();
+  await expect(page.locator('#guest-count-status')).toHaveText('The play count will be retried when the connection returns.');
+  await expect(page.locator('#retry-button')).toBeEnabled();
+  f.network.guestFailure=false;
+  await page.evaluate(()=>window.dispatchEvent(new Event('online')));
+  await expect(page.locator('#guest-count-status')).toHaveText('Play count recorded.');
+  expect(f.guestStarts).toHaveLength(2);
+  expect(f.guestStarts[0].p_start_id).toBe(f.guestStarts[1].p_start_id);
+  expect(f.submissions).toHaveLength(0);expect(f.errors).toEqual([]);
+});
+
+test('unacknowledged anonymous count and ranking read failure do not block a completed game',async({page})=>{
+  const f=await setup(page,{invalidAck:true,readFailure:true});
+  await start(page,{name:''});await complete(page,'en');
+  await expect(page.locator('#guest-count-status')).toHaveText('The play count could not be recorded.');
+  await expect(page.locator('#ranking-read-status')).toHaveText('Could not load the leaderboard.');
+  await expect(page.locator('#retry-button')).toBeEnabled();
+  expect(f.submissions).toHaveLength(0);expect(f.errors).toEqual([]);
+});
+
+
+test('rejected named result stays rejected after language change and sharing',async({page})=>{
+  const f=await setup(page,{namedRejected:true});
+  await start(page);await complete(page,'en');
+  await expect(page.locator('#copy-ranking-error-button')).toBeVisible();
+  await expect(page.locator('#ranking-first-score')).toHaveText('--');
+  await page.locator('#language-select').selectOption('fr');
+  await expect(page.locator('#ranking-best-message')).toBeEmpty();
+  await expect(page.locator('#ranking-first-score')).toHaveText('--');
+  await page.locator('#copy-result-button').click();
+  const share=await page.evaluate(()=>window.__shares.at(-1));
+  expect(share).not.toContain('Temps du premier essai');
+  expect(f.submissions).toHaveLength(1);expect(f.errors).toEqual([]);
 });

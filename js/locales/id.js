@@ -1,6 +1,19 @@
 // Display text only; never use these strings for answer or score logic.
 export default {
   "messages": {
+    "名前（ランキング参加は任意）": "Nama (opsional, untuk peringkat)",
+    "名前なしでも遊べます": "Anda bisa bermain tanpa nama",
+    "入力すると名前と記録が公開され、ランキングに参加します。空欄では回数のみ計測します。": "Jika nama diisi, nama dan hasil Anda akan dipublikasikan di papan peringkat. Kosongkan untuk menghitung permainan saja.",
+    "名前は20文字以内で入力してください。": "Masukkan nama maksimal 20 karakter.",
+    "ランキング詳細": "Papan peringkat lengkap",
+    "ランキング上位30名": "Peringkat: 30 pemain teratas",
+    "ランキングを読み込んでいます…": "Memuat papan peringkat…",
+    "ランキングを取得できませんでした。": "Tidak dapat memuat papan peringkat.",
+    "名前なしのプレイです。回数のみ計測し、スコアは登録しません。": "Bermain tanpa nama. Hanya jumlah permainan yang dicatat; skor tidak dikirim.",
+    "プレイ回数を記録しました。": "Permainan telah dihitung.",
+    "プレイ回数は通信回復後に再送します。": "Jumlah permainan akan dikirim ulang saat koneksi kembali.",
+    "プレイ回数を記録できませんでした。": "Permainan tidak dapat dihitung.",
+    "プレイ回数を記録中です…": "Mencatat permainan…",
     "このブラウザには自己ベストを保存できませんでした。": "Rekor pribadi tidak dapat disimpan di browser ini.",
     "イロアテ": "Iroate",
     "20問スピード勝負": "Tantangan cepat 20 soal",

@@ -1,6 +1,19 @@
 // Display text only; never use these strings for answer or score logic.
 export default {
   "messages": {
+    "名前（ランキング参加は任意）": "Name (optional, for leaderboard)",
+    "名前なしでも遊べます": "You can play without a name",
+    "入力すると名前と記録が公開され、ランキングに参加します。空欄では回数のみ計測します。": "Entering a name makes your name and scores public on the leaderboard. Leave it blank to count plays only.",
+    "名前は20文字以内で入力してください。": "Please use a name of up to 20 characters.",
+    "ランキング詳細": "Full leaderboard",
+    "ランキング上位30名": "Leaderboard: top 30 players",
+    "ランキングを読み込んでいます…": "Loading leaderboard…",
+    "ランキングを取得できませんでした。": "Could not load the leaderboard.",
+    "名前なしのプレイです。回数のみ計測し、スコアは登録しません。": "Playing without a name. Only the play count is recorded; no score is submitted.",
+    "プレイ回数を記録しました。": "Play count recorded.",
+    "プレイ回数は通信回復後に再送します。": "The play count will be retried when the connection returns.",
+    "プレイ回数を記録できませんでした。": "The play count could not be recorded.",
+    "プレイ回数を記録中です…": "Recording play count…",
     "このブラウザには自己ベストを保存できませんでした。": "Your personal best could not be saved in this browser.",
     "イロアテ": "Iroate",
     "20問スピード勝負": "20-question speed challenge",

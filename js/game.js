@@ -1,5 +1,6 @@
 import { COLORS, TOTAL_QUESTIONS, PENALTY_SECONDS, SCORE_SCALE, createGameQuestions, scoreForSeconds } from './engine.js';
 import { SUPPORTED_LANGUAGES, getLanguage, setLanguage, t, translate, colorName, applyTranslations, setTranslatedText } from './i18n.js';
+import {createGuestPlayCounter} from './guest-plays.js';
 import { SoundEffects } from './sound-effects.js';
 
 const soundEffects = new SoundEffects();
@@ -9,10 +10,11 @@ let currentScreen = 'title';
 let roundLanguage = getLanguage();
 let roundId = 0;
 let resultState = null;
-let isNameSubmitting = false;
+let guestStartId = null;
+let guestCountStatus = "counting";
 
-// Bound fetch and an abort deadline preserve Safari compatibility. RPC names,
-// arguments and score storage contract remain unchanged; never auto-retry writes.
+// Bound fetch and a deadline preserve Safari compatibility. Score writes are
+// never retried; anonymous start retries use their dedicated UUID-based queue.
 async function rankingRpc(client, name, parameters) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 8000);
@@ -30,7 +32,6 @@ const PUBLIC_URL = "https://chameleonjp-lab.github.io/iroate/";
 const screens = {
   title: document.getElementById("title-screen"),
   rules: document.getElementById("rules-screen"),
-  name: document.getElementById("name-screen"),
   countdown: document.getElementById("countdown-screen"),
   game: document.getElementById("game-screen"),
   result: document.getElementById("result-screen")
@@ -51,8 +52,6 @@ const finalTimeText = document.getElementById("final-time");
 const bestMessage = document.getElementById("best-message");
 const toast = document.getElementById("toast");
 const playerNameInput = document.getElementById("player-name-input");
-const nameSubmitButton = document.getElementById("name-submit-button");
-const nameBackButton = document.getElementById("name-back-button");
 const nameError = document.getElementById("name-error");
 const rankingStatus = document.getElementById("ranking-status");
 const copyRankingErrorButton = document.getElementById("copy-ranking-error-button");
@@ -66,6 +65,8 @@ const rankingPanel = document.getElementById("ranking-panel");
 const bestRankingTab = document.getElementById("best-ranking-tab");
 const firstRankingTab = document.getElementById("first-ranking-tab");
 const rankingList = document.getElementById("ranking-list");
+const rankingReadStatus = document.getElementById("ranking-read-status");
+const guestCountStatusText = document.getElementById("guest-count-status");
 
 const startButton = document.getElementById("start-button");
 const rulesButton = document.getElementById("rules-button");
@@ -124,58 +125,22 @@ function savePlayerName(name) {
 }
 
 function beginStartFlow() {
-  roundId += 1;
-  stopTimer();
-  clearCountdown();
-  hideToast();
-
-  const savedName = getSavedPlayerName();
-  if (savedName) {
-    currentPlayerName = savedName;
-    startGame();
-    return;
-  }
-
-  setTranslatedText(nameError, "");
-  playerNameInput.value = "";
-  showScreen("name");
-
-  window.setTimeout(() => {
-    playerNameInput.focus();
-  }, 80);
-}
-
-async function submitPlayerNameAndStart() {
-  if (isNameSubmitting || currentScreen !== "name") return;
-  const name = playerNameInput.value.trim().slice(0, 20);
-
-  if (!name) {
-    setTranslatedText(nameError, "名前を入力してください");
+  if (!['title','rules','result'].includes(currentScreen)) return;
+  const name = playerNameInput.value.trim();
+  if (name.length > 20) {
+    setTranslatedText(nameError, '名前は20文字以内で入力してください。');
+    showScreen('title');
     playerNameInput.focus();
     return;
   }
-
-  isNameSubmitting = true;
-  nameSubmitButton.disabled = true;
-  const nameRound = roundId;
+  // Capture the optional name once. A later edit cannot alter this round.
   currentPlayerName = name;
   savePlayerName(name);
-  setTranslatedText(nameError, "");
-  playerNameInput.blur();
-
-  await waitForViewportToSettle();
-  isNameSubmitting = false;
-  nameSubmitButton.disabled = false;
-  if (nameRound === roundId && currentScreen === "name") startGame();
-}
-
-function waitForViewportToSettle() {
-  return new Promise((resolve) => {
-    const waitMs = window.visualViewport ? 450 : 250;
-    window.setTimeout(() => {
-      requestAnimationFrame(() => resolve());
-    }, waitMs);
-  });
+  setTranslatedText(nameError, '');
+  playerNameInput.blur(); // The 3-second countdown also lets the iOS keyboard close.
+  roundId += 1;
+  stopTimer();clearCountdown();hideToast();
+  startGame();
 }
 
 function getSupabaseClient() {
@@ -213,6 +178,8 @@ function resetRankingUi() {
   rankingPlayCount.textContent = "--";
   setTranslatedText(rankingBestMessage, "");
   rankingPanel.hidden = true;
+  setTranslatedText(rankingReadStatus, "");
+  guestCountStatusText.hidden = true;
   rankingList.innerHTML = "";
   bestRankingRows = [];
   firstRankingRows = [];
@@ -268,78 +235,99 @@ function buildRankingErrorText(error) {
   ].filter(Boolean).join("\n");
 }
 
-async function syncScoreAndRankings(finalScore) {
-  if (scoreSubmitted) {
-    return;
-  }
-
-  scoreSubmitted = true;
-  renderRankingSummary(finalScore);
-  const requestRound = roundId;
-  rankingStatus.hidden = false;
-  setTranslatedText(rankingStatus, "ランキング送信中です…");
-  copyRankingErrorButton.hidden = true;
-
+async function loadRankings(requestRound) {
+  rankingPanel.hidden = false;
+  rankingList.hidden = true;
+  setTranslatedText(rankingReadStatus, 'ランキングを読み込んでいます…');
   try {
     const client = getSupabaseClient();
-    const { data: submitData, error: submitError } = await rankingRpc(client, "submit_score", {
-      p_display_name: currentPlayerName,
-      p_game_slug: GAME_SLUG,
-      p_score: finalScore,
-      p_client_version: CLIENT_VERSION
-    });
-
-    if (submitError) {
-      throw submitError;
-    }
-
+    const [best, first] = await Promise.all([
+      rankingRpc(client, 'get_best_score_ranking', {p_game_slug: GAME_SLUG, p_limit: 30}),
+      rankingRpc(client, 'get_first_try_ranking', {p_game_slug: GAME_SLUG, p_limit: 30})
+    ]);
     if (requestRound !== roundId) return;
-    latestRankingResult = normalizeRpcResult(submitData);
-    if (!latestRankingResult?.accepted) throw new Error("Submission was not accepted");
-    renderRankingSummary(finalScore);
-
-    const { data: bestData, error: bestError } = await rankingRpc(client, "get_best_score_ranking", {
-      p_game_slug: GAME_SLUG,
-      p_limit: 10
-    });
-
-    if (bestError) {
-      throw bestError;
-    }
-
-    const { data: firstData, error: firstError } = await rankingRpc(client, "get_first_try_ranking", {
-      p_game_slug: GAME_SLUG,
-      p_limit: 10
-    });
-
-    if (firstError) {
-      throw firstError;
-    }
-
-    if (requestRound !== roundId) return;
-    bestRankingRows = Array.isArray(bestData) ? bestData : [];
-    firstRankingRows = Array.isArray(firstData) ? firstData : [];
-
-    setTranslatedText(rankingStatus, "ランキングに反映しました");
-    rankingPanel.hidden = false;
-    setRankingTab("best");
+    if (best.error || first.error) throw best.error || first.error;
+    if (!Array.isArray(best.data) || !Array.isArray(first.data)) throw new Error('Invalid ranking response');
+    bestRankingRows = best.data.slice(0, 30);
+    firstRankingRows = first.data.slice(0, 30);
+    setTranslatedText(rankingReadStatus, '');
+    rankingList.hidden = false;
+    renderRankingList();
   } catch (error) {
     if (requestRound !== roundId) return;
-    console.warn("ranking sync failed");
-    lastRankingErrorText = buildRankingErrorText(error);
-    try {
-      localStorage.setItem("iroAteRankingLastError", lastRankingErrorText);
-    } catch (_storageError) {
-      console.warn("ranking error could not be saved");
-    }
-    rankingStatus.hidden = false;
-    setTranslatedText(rankingStatus, "ランキング連携に失敗しました😅");
-    copyRankingErrorButton.hidden = false;
-    rankingPanel.hidden = true;
-  } finally {
-    if (requestRound === roundId) setResultActionsDisabled(false);
+    setTranslatedText(rankingReadStatus, 'ランキングを取得できませんでした。');
   }
 }
+
+async function syncScoreAndRankings(finalScore) {
+  if (scoreSubmitted) return;
+  scoreSubmitted = true;
+  const requestRound = roundId;
+  if (!currentPlayerName) {
+    rankingStatus.hidden = false;
+    setTranslatedText(rankingStatus, '名前なしのプレイです。回数のみ計測し、スコアは登録しません。');
+    renderGuestCountStatus();
+    await loadRankings(requestRound);
+    return;
+  }
+  if (finalScore === null) {await loadRankings(requestRound);return;}
+  renderRankingSummary(finalScore);
+  rankingStatus.hidden = false;
+  setTranslatedText(rankingStatus, 'ランキング送信中です…');
+  const initialRead = loadRankings(requestRound); // Viewing ranks never depends on a successful write.
+  try {
+    const {data, error} = await rankingRpc(getSupabaseClient(), 'submit_score', {
+      p_display_name: currentPlayerName, p_game_slug: GAME_SLUG,
+      p_score: finalScore, p_client_version: CLIENT_VERSION
+    });
+    if (requestRound !== roundId) return;
+    if (error) throw error;
+    const acceptedResult = normalizeRpcResult(data);
+    if (acceptedResult?.accepted !== true) throw new Error('Submission was not accepted');
+    latestRankingResult = acceptedResult;
+    renderRankingSummary(finalScore);
+    setTranslatedText(rankingStatus, 'ランキングに反映しました');
+    await initialRead;
+    if (requestRound === roundId) await loadRankings(requestRound); // Include the newly accepted result.
+  } catch (error) {
+    if (requestRound !== roundId) return;
+    lastRankingErrorText = buildRankingErrorText(error);
+    try {localStorage.setItem('iroAteRankingLastError', lastRankingErrorText);} catch { /* Optional diagnostics. */ }
+    setTranslatedText(rankingStatus, 'ランキング連携に失敗しました😅');
+    copyRankingErrorButton.hidden = false;
+    await initialRead;
+  }
+}
+
+async function sendGuestStart(startId) {
+  const {data, error} = await rankingRpc(getSupabaseClient(), 'start_iroate_guest_play_v1', {
+    p_start_id: startId, p_game_slug: GAME_SLUG, p_client_version: CLIENT_VERSION
+  });
+  if (error) throw error;
+  if (data?.accepted !== true || data.start_id !== startId || data.game_slug !== GAME_SLUG || data.client_version !== CLIENT_VERSION
+      || typeof data.play_id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(data.play_id)) {
+    throw Object.assign(new Error('Guest start was not acknowledged'), {
+      retryable: data?.accepted !== true && data?.reason === 'play_rate_limited'
+    });
+  }
+}
+
+function renderGuestCountStatus() {
+  if (currentScreen !== 'result' || currentPlayerName) return;
+  guestCountStatusText.hidden = false;
+  setTranslatedText(guestCountStatusText, {
+    counted:'プレイ回数を記録しました。',
+    counting:'プレイ回数を記録中です…',
+    pending:'プレイ回数は通信回復後に再送します。',
+    failed:'プレイ回数を記録できませんでした。'
+  }[guestCountStatus]);
+}
+const guestPlays = createGuestPlayCounter({send:sendGuestStart,onStatus(id,status) {
+  if (id !== guestStartId) return;
+  guestCountStatus = status;
+  renderGuestCountStatus();
+}});
+window.addEventListener('online', () => {void guestPlays.retry();});
 
 function renderRankingSummary(finalScore) {
   rankingSummary.hidden = false;
@@ -458,6 +446,8 @@ function renderQuestion() {
 
 function startGame() {
   roundLanguage = getLanguage();
+  guestStartId = null;
+  guestCountStatus = "counting";
   resultState = null;
   renderColorButtons();
   stopTimer();
@@ -514,6 +504,10 @@ function startGameAfterCountdown() {
   startTime = performance.now();
   soundEffects.play("start");
   timerFrameId = requestAnimationFrame(updateTimer);
+  if (!currentPlayerName) {
+    guestStartId = guestPlays.record();
+    if (!guestStartId) guestCountStatus = 'failed';
+  }
 }
 
 function flashWrong() {
@@ -598,6 +592,7 @@ function retireGame() {
   updateBestTimeDisplay();
   showScreen("result");
   renderResult();
+  void syncScoreAndRankings(null);
 }
 
 function buildResultCopyText() {
@@ -740,18 +735,8 @@ resultTitleButton.addEventListener("click", () => {
 retireButton.addEventListener("click", retireGame);
 copyResultButton.addEventListener("click", copyResultToClipboard);
 shareButton.addEventListener("click", copyShareText);
-nameSubmitButton.addEventListener("click", submitPlayerNameAndStart);
-nameBackButton.addEventListener("click", () => {
-  setTranslatedText(nameError, "");
-  playerNameInput.blur();
-  roundId += 1;
-  showScreen("title");
-});
-playerNameInput.addEventListener("keydown", (event) => {
-  if (event.key === "Enter") {
-    event.preventDefault();
-    submitPlayerNameAndStart();
-  }
+playerNameInput.addEventListener('keydown', event => {
+  if (event.key === 'Enter' && !event.isComposing) {event.preventDefault();beginStartFlow();}
 });
 bestRankingTab.addEventListener("click", () => setRankingTab("best"));
 firstRankingTab.addEventListener("click", () => setRankingTab("first"));
@@ -785,7 +770,9 @@ function renderResult() {
   // Use a translated seconds template; the plus sign is language-independent.
   penaltyTimeText.removeAttribute('data-i18n');
   penaltyTimeText.textContent = `+${t('{0}秒', {0:penaltySeconds})}`;
-  if (!retired && latestResultScore !== null) renderRankingSummary(latestResultScore);
+  if (!retired && currentPlayerName && latestResultScore !== null) renderRankingSummary(latestResultScore);
+  else rankingSummary.hidden = true;
+  renderGuestCountStatus();
 }
 
 for (const {id, name} of SUPPORTED_LANGUAGES) {
@@ -832,3 +819,6 @@ updateSoundButton();
 renderColorButtons();
 updateBestTimeDisplay();
 timer.textContent = formatSeconds(0);
+
+playerNameInput.value = getSavedPlayerName();
+void guestPlays.retry();

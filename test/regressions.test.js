@@ -32,3 +32,28 @@ test('ranking error handler executes and never forwards server message, hint, de
   assert.ok(text.includes('public_url: https://chameleonjp-lab.github.io/iroate/'));
   assert.ok(!text.includes('PRIVATEPLAYER'));
 });
+
+test('rejected named RPC reply never becomes a submitted result for later language/share rendering',async()=>{
+  const functions=source.slice(source.indexOf('async function syncScoreAndRankings('),source.indexOf('async function sendGuestStart('));
+  const context=vm.createContext({scoreSubmitted:false,roundId:1,currentPlayerName:'Player',latestRankingResult:null,
+    rankingStatus:{},copyRankingErrorButton:{},lastRankingErrorText:'',GAME_SLUG:'iroate',CLIENT_VERSION:'iroate-ranking-v1',
+    setTranslatedText(){},renderRankingSummary(){},async loadRankings(){},getSupabaseClient(){return {}},
+    async rankingRpc(){return {data:[{accepted:false,result_first_score:null,result_best_score:null}],error:null}},
+    normalizeRpcResult:data=>data[0],buildRankingErrorText:()=>'',localStorage:{setItem(){}}
+  });
+  await vm.runInContext(functions+';syncScoreAndRankings(2681);',context);
+  assert.equal(context.latestRankingResult,null);
+});
+
+test('guest count ACK requires strict acceptance and matching identifiers before dropping pending entry',async()=>{
+  const functions=source.slice(source.indexOf('async function sendGuestStart('),source.indexOf('function renderGuestCountStatus('));
+  const startId='40000000-0000-4000-8000-000000000001';
+  const valid={accepted:true,start_id:startId,game_slug:'iroate',client_version:'iroate-ranking-v1',play_id:'40000000-0000-4000-8000-000000000002'};
+  const context=vm.createContext({reply:null,GAME_SLUG:'iroate',CLIENT_VERSION:'iroate-ranking-v1',getSupabaseClient(){return {}},async rankingRpc(){return {data:context.reply,error:null}}});
+  const send=vm.runInContext(functions+';sendGuestStart;',context);
+  for(const change of [{accepted:false},{accepted:'true'},{accepted:'false'},{start_id:'other'},{game_slug:'takkeu'},{client_version:'wrong'},{play_id:'------------------------------------'}]) {
+    context.reply={...valid,...change};
+    await assert.rejects(send(startId));
+  }
+  context.reply=valid;await assert.doesNotReject(send(startId));
+});

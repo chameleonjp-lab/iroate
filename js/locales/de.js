@@ -1,6 +1,19 @@
 // Display text only; never use these strings for answer or score logic.
 export default {
   "messages": {
+    "名前（ランキング参加は任意）": "Name (optional, für die Rangliste)",
+    "名前なしでも遊べます": "Du kannst ohne Namen spielen",
+    "入力すると名前と記録が公開され、ランキングに参加します。空欄では回数のみ計測します。": "Mit einem Namen werden dein Name und deine Ergebnisse in der Rangliste veröffentlicht. Ohne Namen werden nur die Runden gezählt.",
+    "名前は20文字以内で入力してください。": "Bitte verwende einen Namen mit höchstens 20 Zeichen.",
+    "ランキング詳細": "Vollständige Rangliste",
+    "ランキング上位30名": "Rangliste: die besten 30",
+    "ランキングを読み込んでいます…": "Rangliste wird geladen…",
+    "ランキングを取得できませんでした。": "Die Rangliste konnte nicht geladen werden.",
+    "名前なしのプレイです。回数のみ計測し、スコアは登録しません。": "Spiel ohne Namen. Nur die Runde wird gezählt; kein Ergebnis wird gesendet.",
+    "プレイ回数を記録しました。": "Runde gezählt.",
+    "プレイ回数は通信回復後に再送します。": "Die Zählung wird bei wiederhergestellter Verbindung erneut gesendet.",
+    "プレイ回数を記録できませんでした。": "Die Runde konnte nicht gezählt werden.",
+    "プレイ回数を記録中です…": "Runde wird gezählt…",
     "このブラウザには自己ベストを保存できませんでした。": "Dein persönlicher Rekord konnte in diesem Browser nicht gespeichert werden.",
     "イロアテ": "Iroate",
     "20問スピード勝負": "Tempo-Challenge mit 20 Fragen",
