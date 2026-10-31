@@ -498,7 +498,7 @@ button:disabled {
 
 .color-button[data-color="yellow"],
 .color-button[data-color="pink"],
-.color-button[data-color="cyan"] {
+.color-button[data-color="orange"] {
   color: #1f2933;
 }
 

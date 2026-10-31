@@ -1,7 +1,8 @@
 import {test,expect} from '@playwright/test';
 import {SUPPORTED_LANGUAGES} from '../../js/language-options.js';
 import {COLORS} from '../../js/engine.js';
-import {colorName, translate, LANGUAGE_STORAGE_KEY} from '../../js/i18n.js';
+import {translate, LANGUAGE_STORAGE_KEY} from '../../js/i18n.js';
+import {EXPECTED_COLOR_LABELS, expectedColorWord} from '../fixtures/color-names.js';
 const rgb = hex => `rgb(${[1,3,5].map(n=>parseInt(hex.slice(n,n+2),16)).join(', ')})`;
 
 async function setup(page,{failure=false,delay=false,storageBlocked=false,audioBlocked=false,rows=2,guestFailure=false,invalidAck=false,readFailure=false,namedRejected=false}={}) {
@@ -56,7 +57,7 @@ async function answerId(page,lang) {
   const type=await page.locator('#instruction-text').getAttribute('data-type');
   const word=await page.locator('#display-word').textContent();
   const ink=await page.locator('#display-word').evaluate(e=>getComputedStyle(e).color);
-  return type==='meaning' ? COLORS.find(c=>colorName(c.id,lang,true)===word).id : COLORS.find(c=>rgb(c.hex)===ink).id;
+  return type==='meaning' ? COLORS.find(c=>expectedColorWord(c.id,lang)===word).id : COLORS.find(c=>rgb(c.hex)===ink).id;
 }
 async function complete(page,lang,{miss=true}={}) {
   const types=[];
@@ -111,10 +112,10 @@ for(const {id:lang} of SUPPORTED_LANGUAGES) test(`${lang}: every screen, ink/mea
   await page.locator('#share-button').click();
   await start(page);
   await translated(page,lang);
-  for(const c of COLORS) await expect(page.locator(`[data-color="${c.id}"]`)).toHaveText(colorName(c.id,lang));
+  for(const c of COLORS) await expect(page.locator(`[data-color="${c.id}"]`)).toHaveText(EXPECTED_COLOR_LABELS[lang][c.id]);
   const originalWord=await page.locator('#display-word').textContent();
   for (const c of COLORS) {
-    await page.locator('#display-word').evaluate((el,word)=>{el.textContent=word},colorName(c.id,lang,true));
+    await page.locator('#display-word').evaluate((el,word)=>{el.textContent=word},expectedColorWord(c.id,lang));
     await noOverflow(page);
   }
   await page.locator('#display-word').evaluate((el,word)=>{el.textContent=word},originalWord);
@@ -165,7 +166,6 @@ test('communication failure: error builder runs, results/retry survive; no real 
 
 test('storage/audio unavailable and unknown saved language do not block play',async({page})=>{
   const f=await setup(page,{storageBlocked:true,audioBlocked:true});
-  await page.locator('#sound-toggle').click();
   await expect(page.locator('#sound-toggle')).toHaveAttribute('aria-pressed','true');
   await start(page);await complete(page,'en',{miss:false});
   await expect(page.locator('#best-message')).toHaveText('Your personal best could not be saved in this browser.');
@@ -187,9 +187,13 @@ test('slow old ranking response cannot overwrite a new round; actions stay usabl
 test('manual language and sound settings persist; invalid saved value falls back',async({page})=>{
   await setup(page);
   await page.locator('#language-select').selectOption('tr');
+  await expect(page.locator('#sound-toggle')).toHaveAttribute('aria-pressed','true');
   await page.locator('#sound-toggle').click();
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('lang','tr');
+  await expect(page.locator('#sound-toggle')).toHaveAttribute('aria-pressed','false');
+  await page.locator('#sound-toggle').click();
+  await page.reload();
   await expect(page.locator('#sound-toggle')).toHaveAttribute('aria-pressed','true');
   await page.evaluate(key=>localStorage.setItem(key,'not-a-language'),LANGUAGE_STORAGE_KEY);
   await page.reload();
@@ -211,8 +215,7 @@ test('SE wiring: one event per action, gesture unlock, finish sequence and immed
       return result;
     };
   });
-  await expect(page.locator('#sound-toggle')).toHaveAttribute('aria-pressed','false');
-  await page.locator('#sound-toggle').click();
+  await expect(page.locator('#sound-toggle')).toHaveAttribute('aria-pressed','true');
   await start(page);await complete(page,'en');
   const events=await page.evaluate(()=>window.__sounds);
   expect(events.filter(s=>s.event==='countdown')).toHaveLength(3);

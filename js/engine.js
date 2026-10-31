@@ -12,7 +12,7 @@ export const COLORS = [
       { id: "purple", hex: "#8e24aa" },
       { id: "pink", hex: "#ff80ab" },
       { id: "black", hex: "#212121" },
-      { id: "cyan", hex: "#4dd0e1" }
+      { id: "orange", hex: "#f57c00" }
     ];
 
 function shuffle(items) {

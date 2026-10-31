@@ -5,7 +5,7 @@ import { COLORS, TOTAL_QUESTIONS, QUESTIONS_PER_TYPE, PENALTY_SECONDS, SCORE_SCA
 test('all color pairs use internal IDs for meaning and ink answers', () => {
   assert.equal(COLORS.length, 8);
   assert.equal(new Set(COLORS.map(c => c.id)).size, 8);
-  assert.deepEqual(COLORS.map(c => c.hex), ['#e53935','#1e88e5','#43a047','#fdd835','#8e24aa','#ff80ab','#212121','#4dd0e1']);
+  assert.deepEqual(COLORS.map(c => c.hex), ['#e53935','#1e88e5','#43a047','#fdd835','#8e24aa','#ff80ab','#212121','#f57c00']);
   for (const type of ['meaning', 'color']) {
     const pool = buildCandidateQuestionPool(type);
     assert.equal(pool.length, 50);
@@ -32,4 +32,9 @@ test('existing distribution and scoring constraints survive 200 rounds', () => {
   }
   assert.equal(scoreForSeconds(26.81), 2681);
   assert.equal(scoreForSeconds(26.81 + 5), 3181);
+});
+
+test('legacy score rounding uses the raw final total at half-centisecond boundaries', () => {
+  assert.equal(scoreForSeconds(1.005), 100);
+  assert.equal(scoreForSeconds(1.005 + 20), 2101);
 });

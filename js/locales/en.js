@@ -108,6 +108,6 @@ export default {
     "purple": "Purple",
     "pink": "Pink",
     "black": "Black",
-    "cyan": "Cyan"
+    "orange": "Orange"
   }
 };

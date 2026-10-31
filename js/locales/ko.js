@@ -108,6 +108,6 @@ export default {
     "purple": "보라",
     "pink": "분홍",
     "black": "검정",
-    "cyan": "하늘색"
+    "orange": "주황"
   }
 };

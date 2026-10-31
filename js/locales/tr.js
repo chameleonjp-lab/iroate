@@ -108,6 +108,6 @@ export default {
     "purple": "Mor",
     "pink": "Pembe",
     "black": "Siyah",
-    "cyan": "Turkuaz"
+    "orange": "Turuncu"
   }
 };

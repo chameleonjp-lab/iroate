@@ -24,8 +24,8 @@ export class SoundEffects {
   constructor({storage = defaultStorage(), contextFactory = defaultContext} = {}) {
     this.storage = storage;
     this.contextFactory = contextFactory;
-    this.enabled = false;
-    try { this.enabled = storage?.getItem(SOUND_PREFERENCE_KEY) === 'true'; } catch { /* Default OFF. */ }
+    this.enabled = true;
+    try { this.enabled = storage?.getItem(SOUND_PREFERENCE_KEY) !== 'false'; } catch { /* Default ON; preserve saved OFF when readable. */ }
     this.context = null;
     this.masterGain = null;
     this.hidden = false;
