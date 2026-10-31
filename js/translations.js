@@ -16,4 +16,4 @@ import l14 from './locales/th.js';
 const locales = {"ja":l0,"en":l1,"es":l2,"pt-BR":l3,"zh-Hans":l4,"fr":l5,"de":l6,"ko":l7,"ru":l8,"it":l9,"zh-Hant":l10,"id":l11,"tr":l12,"vi":l13,"th":l14};
 export const TRANSLATIONS = Object.freeze(Object.fromEntries(Object.entries(locales).map(([id, v]) => [id, Object.freeze(v.messages)])));
 export const COLOR_NAMES = Object.freeze(Object.fromEntries(Object.entries(locales).map(([id, v]) => [id, Object.freeze(v.colors)])));
-export const JAPANESE_WORDS = Object.freeze({red:"あか",blue:"あお",green:"みどり",yellow:"きいろ",purple:"むらさき",pink:"ぴんく",black:"くろ",cyan:"みずいろ"});
+export const JAPANESE_WORDS = Object.freeze({red:"あか",blue:"あお",green:"みどり",yellow:"きいろ",purple:"むらさき",pink:"ぴんく",black:"くろ",orange:"おれんじ"});

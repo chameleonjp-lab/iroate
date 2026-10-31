@@ -108,6 +108,6 @@ export default {
     "purple": "Tím",
     "pink": "Hồng",
     "black": "Đen",
-    "cyan": "Xanh lơ"
+    "orange": "Cam"
   }
 };

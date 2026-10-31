@@ -108,6 +108,6 @@ export default {
     "purple": "Ungu",
     "pink": "Merah muda",
     "black": "Hitam",
-    "cyan": "Biru muda"
+    "orange": "Oranye"
   }
 };

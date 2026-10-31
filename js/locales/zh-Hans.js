@@ -108,6 +108,6 @@ export default {
     "purple": "紫色",
     "pink": "粉色",
     "black": "黑色",
-    "cyan": "浅蓝色"
+    "orange": "橙色"
   }
 };

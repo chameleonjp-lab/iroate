@@ -108,6 +108,6 @@ export default {
     "purple": "ม่วง",
     "pink": "ชมพู",
     "black": "ดำ",
-    "cyan": "ฟ้า"
+    "orange": "ส้ม"
   }
 };

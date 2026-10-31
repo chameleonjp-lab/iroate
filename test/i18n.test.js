@@ -4,6 +4,17 @@ import { SUPPORTED_LANGUAGES, languageFromLocale } from '../js/language-options.
 import { TRANSLATIONS, COLOR_NAMES } from '../js/translations.js';
 import { createI18n, translate, LANGUAGE_STORAGE_KEY, colorName } from '../js/i18n.js';
 import { COLORS, buildCandidateQuestionPool, scoreForSeconds } from '../js/engine.js';
+import { EXPECTED_COLOR_LABELS, expectedColorWord } from './fixtures/color-names.js';
+
+test('question words and answer labels match independent 15-language meanings, including blue/orange', () => {
+  assert.deepEqual(Object.keys(EXPECTED_COLOR_LABELS), SUPPORTED_LANGUAGES.map(language => language.id));
+  for (const { id: language } of SUPPORTED_LANGUAGES) {
+    for (const [colorId, label] of Object.entries(EXPECTED_COLOR_LABELS[language])) {
+      assert.equal(colorName(colorId, language), label, `${language}/${colorId}: answer label`);
+      assert.equal(colorName(colorId, language, true), expectedColorWord(colorId, language), `${language}/${colorId}: question word`);
+    }
+  }
+});
 
 test('15 complete dictionaries, eight distinct color names, same meaning/ink answers', () => {
   assert.deepEqual(SUPPORTED_LANGUAGES.map(l => l.id), ['ja','en','es','pt-BR','zh-Hans','fr','de','ko','ru','it','zh-Hant','id','tr','vi','th']);
