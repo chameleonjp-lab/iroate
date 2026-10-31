@@ -8,7 +8,7 @@
     let operation = null;
     function valid(item) {
       const p = item?.payload;
-      return UUID.test(item?.id || '') && p?.p_submission_id === item.id && p.p_game_slug === gameSlug &&
+      return ['pending','sending','rejected'].includes(item?.state) && UUID.test(item?.id || '') && p?.p_submission_id === item.id && p.p_game_slug === gameSlug &&
         typeof p.p_display_name === 'string' && p.p_display_name.trim() !== '' &&
         typeof p.p_client_version === 'string' && Number.isInteger(p.p_score) && p.p_score >= 0;
     }

@@ -23,3 +23,10 @@ test('a valid-looking acknowledgement for another name retains the exact pending
  const q=createScoreQueue({gameSlug:'test',storage:storage(),uuid:()=>ID,send:async()=>receipt(10,'Bob')});
  q.enqueue(q.capture('Alice','v1'),10);await q.drain();assert.equal(q.list()[0].state,'pending');assert.equal(q.list()[0].payload.p_display_name,'Alice');
 });
+
+test('corrupt stored status is preserved without restoring or sending it',()=>{
+ const store=storage();const item={id:ID,state:'submitted',payload:{p_submission_id:ID,p_game_slug:'test',p_display_name:'Alice',p_client_version:'v1',p_score:10}};
+ store.setItem('test:score-pending:v1:'+ID,JSON.stringify(item));
+ const q=createScoreQueue({gameSlug:'test',storage:store,send:()=>{throw Error('must not send')}});
+ assert.equal(q.list().length,0);assert.notEqual(store.getItem('test:score-pending:v1:'+ID),null);
+});
