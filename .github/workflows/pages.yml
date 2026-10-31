@@ -1,0 +1,55 @@
+name: Test and deploy Pages
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# Serialize the whole main run, so a slower older commit cannot deploy last.
+concurrency:
+  group: iroate-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Tests and static build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run check:syntax
+      - run: npm test
+      - run: npm run build:pages
+      - run: npm run verify:pages
+      - run: npx playwright install --with-deps chromium webkit
+      - run: npm run test:browser
+      - name: Upload tested Pages artifact
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
+        with:
+          path: dist
+  deploy:
+    name: Deploy tested main
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: test
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure Pages (Source must already be GitHub Actions)
+        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5

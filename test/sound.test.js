@@ -1,0 +1,67 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { SoundEffects, SOUND_PREFERENCE_KEY, SOUND_EVENTS } from '../js/sound-effects.js';
+
+function fixture({reject = false} = {}) {
+  const values = new Map();
+  const storage = {getItem:k=>values.get(k),setItem:(k,v)=>values.set(k,v)};
+  const param = {setValueAtTime(){},exponentialRampToValueAtTime(){}};
+  const nodes = [];
+  const context = {state:'suspended',currentTime:0,destination:{},
+    async resume(){if(reject) throw Error('not allowed');this.state='running'},
+    async suspend(){this.state='suspended'},
+    createGain:()=>({gain:param,connect(){},disconnect(){}}),
+    createOscillator(){const node={frequency:param,connect(){},disconnect(){},start(){},stop(){this.stopped=true},addEventListener(name,fn){this.end=fn}};nodes.push(node);return node;}
+  };
+  return {storage,values,context,nodes,sound:new SoundEffects({storage,contextFactory:()=>context})};
+}
+
+test('OFF by default, unlock only after user opt-in; remembers setting and stops immediately', async () => {
+  const f = fixture();
+  assert.equal(f.sound.enabled, false);
+  assert.equal(f.sound.play('correct'), false);
+  assert.equal(f.sound.context, null);
+  await f.sound.setEnabled(true);
+  assert.equal(f.context.state,'running');
+  assert.equal(f.values.get(SOUND_PREFERENCE_KEY),'true');
+  assert.equal(f.sound.play('correct'),true);
+  assert.ok(f.sound.activeSounds.size > 0);
+  const pending = f.sound.setEnabled(false);
+  assert.equal(f.sound.activeSounds.size,0);
+  assert.ok(f.nodes.every(n=>n.stopped));
+  await pending;
+  assert.equal(new SoundEffects({storage:f.storage}).enabled,false);
+});
+
+test('all required events are short and rapid answers cannot accumulate voices', async () => {
+  const f=fixture();await f.sound.setEnabled(true);
+  assert.deepEqual(Object.keys(SOUND_EVENTS),['select','cancel','countdown','start','correct','wrong','clear','result','best','retire']);
+  for (const event of Object.keys(SOUND_EVENTS)) {
+    assert.equal(f.sound.play(event),true);
+    assert.ok(f.sound.activeSounds.size <= 4);
+    assert.ok(SOUND_EVENTS[event].every(([offset,,duration])=>offset+duration < 0.8));
+  }
+  for(let n=0;n<1000;n++) f.sound.play(n%2?'correct':'wrong');
+  assert.ok(f.sound.activeSounds.size<=2);
+  f.sound.play('clear');f.sound.play('result',{delay:0.28,append:true});f.sound.play('best',{delay:0.4,append:true});
+  assert.ok(f.sound.activeSounds.size <= 12);
+  for (const node of f.nodes) node.end?.();
+  assert.equal(f.sound.activeSounds.size,0);
+});
+
+test('hidden tab, blocked Web Audio, throwing storage and rejected resume never throw', async () => {
+  const f=fixture({reject:true});
+  await f.sound.setEnabled(true);
+  assert.equal(f.sound.play('start'),false);
+  f.sound.handleVisibility(true);
+  assert.equal(await f.sound.unlock(),false);
+  const broken=new SoundEffects({storage:{getItem(){throw Error()},setItem(){throw Error()}},contextFactory(){throw Error()}});
+  await broken.setEnabled(true);
+  assert.equal(broken.play('start'),false);
+  const ok=fixture();await ok.sound.setEnabled(true);ok.sound.play('clear');
+  ok.sound.handleVisibility(true);
+  assert.equal(ok.sound.activeSounds.size,0);
+  assert.equal(ok.sound.play('correct'),false);
+  ok.sound.handleVisibility(false);await ok.sound.unlock();
+  assert.equal(ok.sound.play('correct'),true);
+});

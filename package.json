@@ -1,0 +1,19 @@
+{
+  "name": "iroate",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test --test-isolation=none test/*.test.js",
+    "test:browser": "playwright test",
+    "check:syntax": "node scripts/check-syntax.js",
+    "build:pages": "node scripts/build-pages.js",
+    "verify:pages": "node scripts/verify-pages.js"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.13",
+    "@playwright/test": "1.64.1"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.118.0"
+  }
+}

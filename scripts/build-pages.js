@@ -1,0 +1,14 @@
+import {cp,mkdir,readFile,rm,writeFile} from 'node:fs/promises';
+import {execFileSync} from 'node:child_process';
+const commit = process.env.GITHUB_SHA || execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
+if(!/^[a-f0-9]{40}$/.test(commit)) throw new Error('Expected a full source commit SHA');
+await rm('dist',{recursive:true,force:true});
+await mkdir('dist/vendor',{recursive:true});
+for(const file of ['index.html','styles.css','js']) await cp(file,`dist/${file}`,{recursive:true});
+await cp('node_modules/@supabase/supabase-js/dist/umd/supabase.js','dist/vendor/supabase.js');
+await cp('node_modules/@supabase/supabase-js/LICENSE','dist/vendor/supabase-LICENSE');
+const html=await readFile('dist/index.html','utf8');
+await writeFile('dist/index.html',html.replace('name="chameleonjp-release" content="development"',`name="chameleonjp-release" content="${commit}"`));
+await writeFile('dist/version.json',JSON.stringify({commit,canonical_url:'https://chameleonjp-lab.github.io/iroate/',client_version:'iroate-ranking-v1'},null,2)+'\n');
+await writeFile('dist/.nojekyll','');
+console.log(`Built dist/ for commit ${commit}`);
