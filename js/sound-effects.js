@@ -28,7 +28,7 @@ export class SoundEffects {
     this.enabled = true;
     try { this.enabled = storage?.getItem(SOUND_PREFERENCE_KEY) !== 'false'; } catch { /* Default ON; preserve saved OFF when readable. */ }
     this.volume = 1;
-    try { const saved = storage?.getItem(SOUND_VOLUME_KEY); const value = Number(saved); if (saved != null && saved !== '' && Number.isFinite(value) && value >= 0 && value <= 1) this.volume = value; } catch {}
+    try { const saved = storage?.getItem(SOUND_VOLUME_KEY); const value = Number(saved); if (saved != null && saved.trim() !== '' && Number.isFinite(value) && value >= 0 && value <= 1) this.volume = value; } catch {}
     this.context = null;
     this.masterGain = null;
     this.hidden = false;
