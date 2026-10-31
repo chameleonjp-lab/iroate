@@ -33,3 +33,8 @@ test('existing distribution and scoring constraints survive 200 rounds', () => {
   assert.equal(scoreForSeconds(26.81), 2681);
   assert.equal(scoreForSeconds(26.81 + 5), 3181);
 });
+
+test('legacy score rounding uses the raw final total at half-centisecond boundaries', () => {
+  assert.equal(scoreForSeconds(1.005), 100);
+  assert.equal(scoreForSeconds(1.005 + 20), 2101);
+});

@@ -77,6 +77,8 @@ for (const language of Object.keys(EXPECTED_COLOR_LABELS)) test(`${language}: bl
   expect(saved.finalTime-saved.clearTime).toBeCloseTo(20,9);
   await expect.poll(()=>submissions.length).toBe(1);
   expect(submissions[0].p_game_slug).toBe('iroate');
-  expect(submissions[0].p_score-Math.round(saved.clearTime*100)).toBe(2000);
+  // Compare the raw final total rounded once. Subtracting separately rounded
+  // times can differ by one at binary floating-point half-centisecond edges.
+  expect(submissions[0].p_score).toBe(Math.round(saved.finalTime*100));
   expect(errors).toEqual([]);
 });
