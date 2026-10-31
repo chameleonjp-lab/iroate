@@ -1,6 +1,9 @@
 // Display text only; never use these strings for answer or score logic.
 export default {
   "messages": {
+    "Xでシェアする": "Partager sur X",
+    "文字の「色」か「意味」を{0}問当てるタイムアタック！": "Contre-la-montre : répondez à {0} questions sur la couleur ou le sens des mots !",
+    "最終タイム：{0}": "Temps final : {0}",
     "名前（ランキング参加は任意）": "Nom (facultatif, pour le classement)",
     "名前なしでも遊べます": "Vous pouvez jouer sans nom",
     "入力すると名前と記録が公開され、ランキングに参加します。空欄では回数のみ計測します。": "En saisissant un nom, votre nom et vos résultats seront publics au classement. Laissez ce champ vide pour compter uniquement les parties.",
