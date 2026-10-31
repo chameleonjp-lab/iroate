@@ -1,6 +1,9 @@
 // Display text only; never use these strings for answer or score logic.
 export default {
   "messages": {
+    "Xでシェアする": "X'te paylaş",
+    "文字の「色」か「意味」を{0}問当てるタイムアタック！": "Zamana karşı yarış! Kelimelerin rengini veya anlamını soran {0} soruyu yanıtla!",
+    "最終タイム：{0}": "Son süre: {0}",
     "名前（ランキング参加は任意）": "Ad (sıralama için isteğe bağlı)",
     "名前なしでも遊べます": "Adsız oynayabilirsiniz",
     "入力すると名前と記録が公開され、ランキングに参加します。空欄では回数のみ計測します。": "Ad girerseniz adınız ve sonuçlarınız sıralamada herkese açık olur. Boş bırakırsanız yalnızca oyun sayılır.",

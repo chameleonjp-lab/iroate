@@ -16,8 +16,21 @@ async function setup(page,{failure=false,delay=false,storageBlocked=false,audioB
       window.webkitAudioContext = window.AudioContext;
     }
     window.__shares=[];
-    Object.defineProperty(navigator,'share',{value:async data=>window.__shares.push(data.text)});
+    window.__nativeShares=[];
+    Object.defineProperty(navigator,'share',{value:async data=>window.__nativeShares.push(data.text)});
   },{storageBlocked,audioBlocked});
+  // This also covers the first request of a newly opened popup; page.route
+  // alone cannot intercept that request. No X request reaches the network.
+  await page.context().route('**/*',async route=>{
+    const url=new URL(route.request().url());
+    if(url.origin==='https://x.com'&&url.pathname==='/intent/tweet') {
+      expect(route.request().method()).toBe('GET');
+      const text=url.searchParams.get('text');
+      await page.evaluate(value=>window.__shares.push(value),text);
+      return route.fulfill({contentType:'text/html',body:'<!doctype html><title>Mock X composer</title>'});
+    }
+    return route.abort();
+  });
   await page.route('**/*',async route=>{
     const url=new URL(route.request().url());
     if(url.hostname==='127.0.0.1') return route.continue();
@@ -42,6 +55,48 @@ async function setup(page,{failure=false,delay=false,storageBlocked=false,audioB
   await page.goto('./');
   return {errors,submissions,pending,guestStarts,reads,network};
 }
+
+async function shareOnX(page,selector) {
+  const link=page.locator(selector);
+  await expect(link).toHaveAttribute('target','_blank');
+  await expect(link).toHaveAttribute('rel',/noopener/);
+  await expect(link).toHaveAttribute('rel',/noreferrer/);
+  const opened=page.waitForEvent('popup');
+  await link.click();
+  const popup=await opened;
+  await popup.waitForLoadState('domcontentloaded');
+  const url=new URL(popup.url());
+  expect(url.origin).toBe('https://x.com');
+  expect(url.pathname).toBe('/intent/tweet');
+  expect(url.searchParams.get('text')).toContain('https://chameleonjp-lab.github.io/iroate/');
+  await popup.close();
+  expect(await page.evaluate(()=>window.__nativeShares)).toEqual([]);
+}
+
+test('Japanese X share uses exact 20-question copy, black and white links, and result records',async({page})=>{
+  const f=await setup(page);
+  await page.locator('#language-select').selectOption('ja');
+  const intro='イロアテ\n文字の「色」か「意味」を20問当てるタイムアタック！';
+  for(const selector of ['#share-button','#copy-result-button']) {
+    await expect(page.locator(selector)).toHaveText('Xでシェアする');
+    await expect(page.locator(selector)).toHaveCSS('background-color','rgb(0, 0, 0)');
+    await expect(page.locator(selector)).toHaveCSS('color','rgb(255, 255, 255)');
+  }
+  await shareOnX(page,'#share-button');
+  expect(await page.evaluate(()=>window.__shares.at(-1))).toBe(intro+'\nhttps://chameleonjp-lab.github.io/iroate/');
+  await start(page);await complete(page,'ja');
+  await expect(page.locator('#ranking-status')).toHaveText('ランキングに反映しました');
+  // Context menus and middle-click use href without invoking a normal click.
+  const readyText=new URL(await page.locator('#copy-result-button').getAttribute('href')).searchParams.get('text');
+  expect(readyText).toContain('初回挑戦タイム：30.00秒');
+  expect(readyText).toContain('ベストタイム：');
+  await shareOnX(page,'#copy-result-button');
+  const result=await page.evaluate(()=>window.__shares.at(-1));
+  expect(result.startsWith(intro+'\n')).toBe(true);
+  expect(result).toContain('最終タイム：');
+  expect(result.split('https://chameleonjp-lab.github.io/iroate/')).toHaveLength(2);
+  expect(f.submissions).toHaveLength(1);expect(f.errors).toEqual([]);
+});
 
 async function start(page,{name='Player'}={}) {
   await page.locator('#player-name-input').fill(name);
@@ -109,7 +164,7 @@ for(const {id:lang} of SUPPORTED_LANGUAGES) test(`${lang}: every screen, ink/mea
   await page.locator('#rules-button').click();
   await translated(page,lang);await noOverflow(page);
   await page.locator('#back-title-button').click();
-  await page.locator('#share-button').click();
+  await shareOnX(page,'#share-button');
   await start(page);
   await translated(page,lang);
   for(const c of COLORS) await expect(page.locator(`[data-color="${c.id}"]`)).toHaveText(EXPECTED_COLOR_LABELS[lang][c.id]);
@@ -136,7 +191,8 @@ for(const {id:lang} of SUPPORTED_LANGUAGES) test(`${lang}: every screen, ink/mea
   await expect(page.locator('#miss-count')).toHaveText(translate('{0}回',{0:1},lang));
   await expect(page.locator('#ranking-list .ranking-rank')).toHaveText([translate('{0}位',{0:1},lang),translate('{0}位',{0:1},lang)]);
   await page.locator('#first-ranking-tab').click();
-  await page.locator('#copy-result-button').click();
+  await shareOnX(page,'#copy-result-button');
+  expect(await page.evaluate(()=>window.__shares)).toHaveLength(2);
   expect(await page.evaluate(()=>window.__shares.every(s=>s.includes('https://chameleonjp-lab.github.io/iroate/')&&!s.includes('codeberg')))).toBe(true);
   // Result messages retranslate too; state is not inferred from displayed text.
   await page.locator('#language-select').selectOption(lang==='en'?'fr':'en');
@@ -144,7 +200,7 @@ for(const {id:lang} of SUPPORTED_LANGUAGES) test(`${lang}: every screen, ink/mea
   await page.clock.runFor(3100);
   await page.locator('#retire-button').click();
   await expect(page.locator('#ranking-summary')).toBeHidden();
-  await page.locator('#copy-result-button').click();
+  await shareOnX(page,'#copy-result-button');
   expect(f.submissions).toHaveLength(1);
   expect(f.errors).toEqual([]);
 });
@@ -310,7 +366,7 @@ test('rejected named result stays rejected after language change and sharing',as
   await page.locator('#language-select').selectOption('fr');
   await expect(page.locator('#ranking-best-message')).toBeEmpty();
   await expect(page.locator('#ranking-first-score')).toHaveText('--');
-  await page.locator('#copy-result-button').click();
+  await shareOnX(page,'#copy-result-button');
   const share=await page.evaluate(()=>window.__shares.at(-1));
   expect(share).not.toContain('Temps du premier essai');
   expect(f.submissions).toHaveLength(1);expect(f.errors).toEqual([]);

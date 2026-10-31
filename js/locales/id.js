@@ -1,6 +1,9 @@
 // Display text only; never use these strings for answer or score logic.
 export default {
   "messages": {
+    "Xでシェアする": "Bagikan ke X",
+    "文字の「色」か「意味」を{0}問当てるタイムアタック！": "Kejar waktu! Jawab {0} soal tentang warna atau arti kata!",
+    "最終タイム：{0}": "Waktu akhir: {0}",
     "名前（ランキング参加は任意）": "Nama (opsional, untuk peringkat)",
     "名前なしでも遊べます": "Anda bisa bermain tanpa nama",
     "入力すると名前と記録が公開され、ランキングに参加します。空欄では回数のみ計測します。": "Jika nama diisi, nama dan hasil Anda akan dipublikasikan di papan peringkat. Kosongkan untuk menghitung permainan saja.",

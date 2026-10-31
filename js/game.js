@@ -2,6 +2,7 @@ import { COLORS, TOTAL_QUESTIONS, PENALTY_SECONDS, SCORE_SCALE, createGameQuesti
 import { SUPPORTED_LANGUAGES, getLanguage, setLanguage, t, translate, colorName, applyTranslations, setTranslatedText } from './i18n.js';
 import {createGuestPlayCounter} from './guest-plays.js';
 import { SoundEffects } from './sound-effects.js';
+import {buildXShareUrl} from './x-share.js';
 
 const soundEffects = new SoundEffects();
 const languageSelect = document.getElementById('language-select');
@@ -161,9 +162,11 @@ function getSupabaseClient() {
 }
 
 function setResultActionsDisabled(isDisabled) {
-  [copyResultButton, retryButton, resultTitleButton].forEach((button) => {
+  [retryButton, resultTitleButton].forEach((button) => {
     button.disabled = isDisabled;
   });
+  copyResultButton.setAttribute('aria-disabled', String(isDisabled));
+  copyResultButton.tabIndex = isDisabled ? -1 : 0;
 }
 
 function resetRankingUi() {
@@ -286,6 +289,7 @@ async function syncScoreAndRankings(finalScore) {
     if (acceptedResult?.accepted !== true) throw new Error('Submission was not accepted');
     latestRankingResult = acceptedResult;
     renderRankingSummary(finalScore);
+    updateShareLinks();
     setTranslatedText(rankingStatus, 'ランキングに反映しました');
     await initialRead;
     if (requestRound === roundId) await loadRankings(requestRound); // Include the newly accepted result.
@@ -595,17 +599,22 @@ function retireGame() {
   void syncScoreAndRankings(null);
 }
 
+function buildShareText(resultLines = []) {
+  return [
+    t('イロアテ'),
+    t('文字の「色」か「意味」を{0}問当てるタイムアタック！', {0: TOTAL_QUESTIONS}),
+    ...resultLines,
+    PUBLIC_URL
+  ].join('\n');
+}
+
 function buildResultCopyText() {
   if (resultState?.retired) {
-    return [
-      t("{0}をプレイしました", {0: t("イロアテ")}),
-      t("結果：リタイア"),
-      PUBLIC_URL
-    ].join("\n");
+    return buildShareText([t('結果：リタイア')]);
   }
 
   const lines = [
-    t("{0}で {1}！", {0: t("イロアテ"), 1: finalTimeText.textContent})
+    t('最終タイム：{0}', {0: finalTimeText.textContent})
   ];
 
   if (latestRankingResult) {
@@ -617,25 +626,12 @@ function buildResultCopyText() {
     lines.push(t("ペナルティ：{0}", {0: penaltyTimeText.textContent}));
   }
 
-  lines.push(PUBLIC_URL);
-  return lines.join("\n");
+  return buildShareText(lines);
 }
 
-async function shareOrCopy(text, sharedMessage = "共有しました") {
-  if (navigator.share) {
-    try {
-      await navigator.share({ text });
-      showToast(sharedMessage);
-      return;
-    } catch (error) {
-      if (error && error.name === "AbortError") {
-        return;
-      }
-      console.error("web share failed", error);
-    }
-  }
-
-  await copyTextToClipboard(text);
+function updateShareLinks() {
+  shareButton.href = buildXShareUrl(buildShareText());
+  copyResultButton.href = buildXShareUrl(resultState ? buildResultCopyText() : buildShareText());
 }
 
 async function copyTextToClipboard(text) {
@@ -654,12 +650,14 @@ function copyRankingErrorToClipboard() {
   copyTextToClipboard(text);
 }
 
-function copyResultToClipboard() {
-  shareOrCopy(buildResultCopyText(), "結果を共有しました");
-}
-
-function copyShareText() {
-  shareOrCopy([t("{0}で遊んでみて！", {0:t("イロアテ")}), PUBLIC_URL].join("\n"), "ゲームを共有しました");
+function prepareResultShareOnX(event) {
+  if (copyResultButton.getAttribute('aria-disabled') === 'true') {
+    event.preventDefault();
+    return;
+  }
+  // Refresh synchronously before the browser follows the link, including a
+  // ranking reply that arrived after the result screen was first rendered.
+  updateShareLinks();
 }
 
 function fallbackCopyText(text) {
@@ -733,8 +731,8 @@ resultTitleButton.addEventListener("click", () => {
   showScreen("title");
 });
 retireButton.addEventListener("click", retireGame);
-copyResultButton.addEventListener("click", copyResultToClipboard);
-shareButton.addEventListener("click", copyShareText);
+copyResultButton.addEventListener('click', prepareResultShareOnX);
+shareButton.addEventListener('click', updateShareLinks);
 playerNameInput.addEventListener('keydown', event => {
   if (event.key === 'Enter' && !event.isComposing) {event.preventDefault();beginStartFlow();}
 });
@@ -773,6 +771,7 @@ function renderResult() {
   if (!retired && currentPlayerName && latestResultScore !== null) renderRankingSummary(latestResultScore);
   else rankingSummary.hidden = true;
   renderGuestCountStatus();
+  updateShareLinks();
 }
 
 for (const {id, name} of SUPPORTED_LANGUAGES) {
@@ -796,6 +795,7 @@ languageSelect.addEventListener('change', () => {
   renderResult();
   renderRankingList();
   updateSoundButton();
+  updateShareLinks();
 });
 
 soundToggle.addEventListener('click', () => {
@@ -816,6 +816,7 @@ document.addEventListener('click', event => {
 
 applyTranslations();
 updateSoundButton();
+updateShareLinks();
 renderColorButtons();
 updateBestTimeDisplay();
 timer.textContent = formatSeconds(0);

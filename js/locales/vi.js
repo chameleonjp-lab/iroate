@@ -1,6 +1,9 @@
 // Display text only; never use these strings for answer or score logic.
 export default {
   "messages": {
+    "Xでシェアする": "Chia sẻ lên X",
+    "文字の「色」か「意味」を{0}問当てるタイムアタック！": "Đua với thời gian! Trả lời {0} câu hỏi về màu chữ hoặc nghĩa của từ!",
+    "最終タイム：{0}": "Thời gian cuối cùng: {0}",
     "名前（ランキング参加は任意）": "Tên (tùy chọn, để xếp hạng)",
     "名前なしでも遊べます": "Có thể chơi không cần tên",
     "入力すると名前と記録が公開され、ランキングに参加します。空欄では回数のみ計測します。": "Nhập tên sẽ công khai tên và kết quả trên bảng xếp hạng. Để trống nếu chỉ muốn đếm lượt chơi.",
