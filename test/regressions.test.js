@@ -33,15 +33,13 @@ test('ranking error handler executes and never forwards server message, hint, de
   assert.ok(!text.includes('PRIVATEPLAYER'));
 });
 
-test('rejected named RPC reply never becomes a submitted result for later language/share rendering',async()=>{
-  const functions=source.slice(source.indexOf('async function syncScoreAndRankings('),source.indexOf('async function sendGuestStart('));
-  const context=vm.createContext({scoreSubmitted:false,roundId:1,currentPlayerName:'Player',latestRankingResult:null,
-    rankingStatus:{},copyRankingErrorButton:{},lastRankingErrorText:'',GAME_SLUG:'iroate',CLIENT_VERSION:'iroate-ranking-v1',
-    setTranslatedText(){},renderRankingSummary(){},async loadRankings(){},getSupabaseClient(){return {}},
-    async rankingRpc(){return {data:[{accepted:false,result_first_score:null,result_best_score:null}],error:null}},
-    normalizeRpcResult:data=>data[0],buildRankingErrorText:()=>'',localStorage:{setItem(){}}
+test('rejected named receipt never becomes a submitted result for later language/share rendering',async()=>{
+  const functions=source.slice(source.indexOf('function onScoreQueueChange('),source.indexOf('async function syncScoreAndRankings('));
+  const context=vm.createContext({scorePlay:{id:'one'},currentScreen:'result',latestRankingResult:null,
+    document:{getElementById:()=>({})},rankingStatus:{},copyRankingErrorButton:{},lastRankingErrorText:'',
+    setTranslatedText(){},renderRankingSummary(){},buildRankingErrorText:()=>'',localStorage:{setItem(){}}
   });
-  await vm.runInContext(functions+';syncScoreAndRankings(2681);',context);
+  vm.runInContext(functions+';onScoreQueueChange({id:"one",state:"rejected"},null);',context);
   assert.equal(context.latestRankingResult,null);
 });
 

@@ -7,7 +7,7 @@ const rgb = hex => `rgb(${[1,3,5].map(n=>parseInt(hex.slice(n,n+2),16)).join(', 
 
 async function setup(page,{failure=false,delay=false,storageBlocked=false,audioBlocked=false,rows=2,guestFailure=false,invalidAck=false,readFailure=false,namedRejected=false}={}) {
   const errors=[],submissions=[], pending=[],guestStarts=[],reads=[];
-  const network={guestFailure};
+  const network={guestFailure,failure};
   page.on('pageerror',e=>errors.push(e.message));
   await page.addInitScript(({storageBlocked,audioBlocked})=>{
     if(storageBlocked) Object.defineProperty(window,'localStorage',{get(){throw new Error('blocked')}});
@@ -41,11 +41,11 @@ async function setup(page,{failure=false,delay=false,storageBlocked=false,audioB
       if(network.guestFailure)return route.fulfill({status:503,json:{message:'offline'}});
       return route.fulfill({json:{accepted:!invalidAck,start_id:body.p_start_id,game_slug:'iroate',client_version:'iroate-ranking-v1',play_id:'30000000-0000-4000-8000-000000000001'}});
     }
-    if(method==='submit_score') {
+    if(method==='submit_score_once_shared_v1') {
       const body=route.request().postDataJSON();submissions.push(body);
       if(delay) await new Promise(r=>pending.push(r));
-      if(failure) return route.fulfill({status:500,json:{message:'offline',code:'TEST'}});
-      return route.fulfill({json:[{accepted:!namedRejected,result_display_name:body.p_display_name,result_first_score:3000,result_best_score:body.p_score,result_play_count:3,is_first_play:false,is_new_best:true}]});
+      if(network.failure) return route.fulfill({status:500,json:{message:'offline',code:'TEST'}});
+      return route.fulfill({json:[{accepted:!namedRejected,result_normalized_name:body.p_display_name,result_display_name:body.p_display_name,result_first_score:3000,result_best_score:body.p_score,result_play_count:3,is_first_play:false,is_new_best:true,was_duplicate:false}]});
     }
     reads.push({method,...route.request().postDataJSON()});
     if(readFailure)return route.fulfill({status:500,json:{message:'ranking unavailable'}});
@@ -392,4 +392,24 @@ test('ranking retry reads records without submitting another play',async({page})
   await page.click('#reload-ranking');
   await expect.poll(()=>f.reads.length).toBeGreaterThan(count);
   expect(f.submissions).toHaveLength(0);
+});
+
+test('named lost acknowledgement survives reload with the same consent and receipt ID',async({page})=>{
+  const f=await setup(page,{failure:true});
+  await page.locator('#language-select').selectOption('en');
+  await start(page);await complete(page,'en');
+  await expect(page.locator('#retry-score')).toBeVisible();
+  expect(f.submissions).toHaveLength(1);
+  const original={...f.submissions[0]};
+  await page.evaluate(()=>localStorage.setItem('iroAtePlayerName','Later name'));
+  f.network.failure=false;
+  await page.reload();
+  await expect(page.locator('#result-screen')).toBeVisible();
+  await expect.poll(()=>f.submissions.length).toBe(2);
+  expect(f.submissions[1]).toEqual(original);
+  await expect(page.locator('#ranking-status')).toHaveText(translate('ランキングに反映しました',{},'en'));
+  await page.locator('#language-select').selectOption('ja');
+  await page.locator('#reload-ranking').click();
+  expect(f.submissions).toHaveLength(2);
+  expect(f.errors).toEqual([]);
 });

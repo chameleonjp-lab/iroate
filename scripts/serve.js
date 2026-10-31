@@ -10,4 +10,4 @@ http.createServer(async (req,res) => {
   if (!path.startsWith(root+'/')) {res.writeHead(403).end();return;}
   try {const data=await readFile(path);res.writeHead(200,{'content-type':types[extname(path)]||'application/octet-stream'}).end(data);}
   catch {res.writeHead(404).end();}
-}).listen(4173,'127.0.0.1');
+}).listen(Number(process.env.IROATE_TEST_PORT || 4173),'127.0.0.1');

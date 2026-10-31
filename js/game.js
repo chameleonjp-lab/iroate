@@ -2,6 +2,7 @@ import { COLORS, TOTAL_QUESTIONS, PENALTY_SECONDS, SCORE_SCALE, createGameQuesti
 import { SUPPORTED_LANGUAGES, getLanguage, setLanguage, t, translate, colorName, applyTranslations, setTranslatedText } from './i18n.js';
 import {createGuestPlayCounter} from './guest-plays.js';
 import { SoundEffects } from './sound-effects.js';
+import './score-queue.js';
 import {buildXShareUrl} from './x-share.js';
 
 const soundEffects = new SoundEffects();
@@ -12,10 +13,11 @@ let roundLanguage = getLanguage();
 let roundId = 0;
 let resultState = null;
 let guestStartId = null;
+let scorePlay = null;
 let guestCountStatus = "counting";
 
 // Bound fetch and a deadline preserve Safari compatibility. Score writes are
-// never retried; anonymous start retries use their dedicated UUID-based queue.
+// retried with immutable receipt IDs; anonymous starts keep their separate queue.
 async function rankingRpc(client, name, parameters) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 8000);
@@ -30,6 +32,16 @@ const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_drzcy0v97knU6FgjqSgBHw_0A9XPdFM
 const GAME_SLUG = "iroate";
 const CLIENT_VERSION = "iroate-ranking-v1";
 const PUBLIC_URL = "https://chameleonjp-lab.github.io/iroate/";
+const scoreQueue = globalThis.CommonScoreQueue.createScoreQueue({
+  gameSlug: GAME_SLUG,
+  storage: (() => { try { return localStorage; } catch { return null; } })(),
+  send: async payload => {
+    const {data, error} = await rankingRpc(getSupabaseClient(), 'submit_score_once_shared_v1', payload);
+    if (error) throw error;
+    return data;
+  },
+  onChange: onScoreQueueChange,
+});
 const screens = {
   title: document.getElementById("title-screen"),
   rules: document.getElementById("rules-screen"),
@@ -136,6 +148,7 @@ function beginStartFlow() {
   }
   // Capture the optional name once. A later edit cannot alter this round.
   currentPlayerName = name;
+  scorePlay = scoreQueue.capture(name, CLIENT_VERSION);
   savePlayerName(name);
   setTranslatedText(nameError, '');
   playerNameInput.blur(); // The 3-second countdown also lets the iOS keyboard close.
@@ -264,10 +277,30 @@ async function loadRankings(requestRound) {
   }
 }
 
+function onScoreQueueChange(item, receipt) {
+  if (item.id !== scorePlay?.id || currentScreen !== 'result') return;
+  const retry = document.getElementById('retry-score');
+  retry.hidden = item.state !== 'pending';
+  if (item.state === 'sending') setTranslatedText(rankingStatus, 'ランキング送信中です…');
+  else if (item.state === 'submitted') {
+    latestRankingResult = receipt;
+    renderRankingSummary(latestResultScore);
+    updateShareLinks();
+    setTranslatedText(rankingStatus, 'ランキングに反映しました');
+    void loadRankings(roundId);
+  } else {
+    setTranslatedText(rankingStatus, 'ランキング連携に失敗しました😅');
+    lastRankingErrorText = buildRankingErrorText({code:item.state});
+    try {localStorage.setItem('iroAteRankingLastError', lastRankingErrorText);} catch {}
+    copyRankingErrorButton.hidden = false;
+  }
+}
+
 async function syncScoreAndRankings(finalScore) {
   if (scoreSubmitted) return;
   scoreSubmitted = true;
   const requestRound = roundId;
+  document.getElementById('retry-score').hidden = true;
   if (!currentPlayerName) {
     rankingStatus.hidden = false;
     setTranslatedText(rankingStatus, '名前なしのプレイです。回数のみ計測し、スコアは登録しません。');
@@ -278,31 +311,10 @@ async function syncScoreAndRankings(finalScore) {
   if (finalScore === null) {await loadRankings(requestRound);return;}
   renderRankingSummary(finalScore);
   rankingStatus.hidden = false;
-  setTranslatedText(rankingStatus, 'ランキング送信中です…');
-  const initialRead = loadRankings(requestRound); // Viewing ranks never depends on a successful write.
-  try {
-    const {data, error} = await rankingRpc(getSupabaseClient(), 'submit_score', {
-      p_display_name: currentPlayerName, p_game_slug: GAME_SLUG,
-      p_score: finalScore, p_client_version: CLIENT_VERSION
-    });
-    if (requestRound !== roundId) return;
-    if (error) throw error;
-    const acceptedResult = normalizeRpcResult(data);
-    if (acceptedResult?.accepted !== true) throw new Error('Submission was not accepted');
-    latestRankingResult = acceptedResult;
-    renderRankingSummary(finalScore);
-    updateShareLinks();
-    setTranslatedText(rankingStatus, 'ランキングに反映しました');
-    await initialRead;
-    if (requestRound === roundId) await loadRankings(requestRound); // Include the newly accepted result.
-  } catch (error) {
-    if (requestRound !== roundId) return;
-    lastRankingErrorText = buildRankingErrorText(error);
-    try {localStorage.setItem('iroAteRankingLastError', lastRankingErrorText);} catch { /* Optional diagnostics. */ }
-    setTranslatedText(rankingStatus, 'ランキング連携に失敗しました😅');
-    copyRankingErrorButton.hidden = false;
-    await initialRead;
-  }
+  void loadRankings(requestRound);
+  if (!scorePlay) { setTranslatedText(rankingStatus, 'ランキング連携に失敗しました😅'); return; }
+  scoreQueue.enqueue(scorePlay, finalScore, {finishedTime, penaltySeconds, missCount, resultState, roundLanguage});
+  await scoreQueue.drain();
 }
 
 async function sendGuestStart(startId) {
@@ -731,6 +743,7 @@ resultTitleButton.addEventListener("click", () => {
 retireButton.addEventListener("click", retireGame);
 copyResultButton.addEventListener('click', prepareResultShareOnX);
 shareButton.addEventListener('click', updateShareLinks);
+playerNameInput.addEventListener('input', () => { const value=playerNameInput.value.trim(); if(value.length<=20) savePlayerName(value); });
 playerNameInput.addEventListener('keydown', event => {
   if (event.key === 'Enter' && !event.isComposing) {event.preventDefault();beginStartFlow();}
 });
@@ -829,3 +842,17 @@ document.getElementById('copy-home-share').addEventListener('click', () => copyT
 document.getElementById('copy-result-share').addEventListener('click', () => copyTextToClipboard(resultState ? buildResultCopyText() : buildShareText()));
 
 document.getElementById('reload-ranking').addEventListener('click', () => { void loadRankings(roundId); });
+
+// Restore only a finalized, consented score. In-progress and guest plays are never published.
+const restoredScore = scoreQueue.list().at(-1);
+if (restoredScore?.presentation?.resultState && Number.isFinite(restoredScore.presentation.finishedTime) && Number.isFinite(restoredScore.presentation.penaltySeconds)) {
+  scorePlay = {id:restoredScore.id,name:restoredScore.payload.p_display_name,clientVersion:restoredScore.payload.p_client_version};
+  currentPlayerName = scorePlay.name;
+  ({finishedTime,penaltySeconds,missCount,resultState} = restoredScore.presentation);
+  latestResultScore = restoredScore.payload.p_score;
+  scoreSubmitted = true;
+  showScreen('result');renderResult();rankingStatus.hidden=false;onScoreQueueChange(restoredScore,null);void loadRankings(roundId);
+}
+document.getElementById('retry-score').addEventListener('click', () => { void scoreQueue.drain(); });
+window.addEventListener('online', () => { void scoreQueue.drain(); });
+void scoreQueue.drain();
