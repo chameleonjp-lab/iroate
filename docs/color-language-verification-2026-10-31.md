@@ -51,8 +51,10 @@
 
 ## マージ後の本番反映
 
+追加指定により、効果音の初期値はONへ変更する。保存されたOFF/ONは引き続き優先し、設定未保存・破損・storage利用不可ではONを使う。読み込み時点でAudioContextは作らず、最初のユーザー操作で再生を有効にする。OFF時の即時停止、音声拒否/非表示時にゲームを止めない既存処理を維持する。原依頼の初期OFFより、この追加指定を優先する。
+
 既存 `.github/workflows/pages.yml` は、mainへのマージによるpushで構文検査・Node・build・静的アセット・全ブラウザ試験を実行し、成功したdistだけを配備する。PRではテストのみで配備しない。この追補の試験も既存の `npm test` / `npm run test:browser` が自動検出する。
 
-Pages設定APIは現在も `build_type=legacy, source=main:/` を返している。設定変更APIは403だった。legacy配備と独自Actionsの競合を避けるため、管理者がSettings → Pages → Build and deployment → Sourceを **GitHub Actions** へ変更する必要がある。workflowの自動配備処理と管理者設定の完了を区別する。
+Pages設定は利用者の管理者操作後、APIの `build_type=workflow`（GitHub Actions）で確認済み。実装時点のlegacy/変更API403の管理者設定は解消した。
 
 利用者のマージ後は、mainのActions成功と `node scripts/verify-deployed.js <mainの完全SHA>` で公開版を照合し、問題・解答の新色名を確認する。マージ前に変更が本番反映済みとは報告しない。

@@ -166,7 +166,6 @@ test('communication failure: error builder runs, results/retry survive; no real 
 
 test('storage/audio unavailable and unknown saved language do not block play',async({page})=>{
   const f=await setup(page,{storageBlocked:true,audioBlocked:true});
-  await page.locator('#sound-toggle').click();
   await expect(page.locator('#sound-toggle')).toHaveAttribute('aria-pressed','true');
   await start(page);await complete(page,'en',{miss:false});
   await expect(page.locator('#best-message')).toHaveText('Your personal best could not be saved in this browser.');
@@ -188,9 +187,13 @@ test('slow old ranking response cannot overwrite a new round; actions stay usabl
 test('manual language and sound settings persist; invalid saved value falls back',async({page})=>{
   await setup(page);
   await page.locator('#language-select').selectOption('tr');
+  await expect(page.locator('#sound-toggle')).toHaveAttribute('aria-pressed','true');
   await page.locator('#sound-toggle').click();
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('lang','tr');
+  await expect(page.locator('#sound-toggle')).toHaveAttribute('aria-pressed','false');
+  await page.locator('#sound-toggle').click();
+  await page.reload();
   await expect(page.locator('#sound-toggle')).toHaveAttribute('aria-pressed','true');
   await page.evaluate(key=>localStorage.setItem(key,'not-a-language'),LANGUAGE_STORAGE_KEY);
   await page.reload();
@@ -212,8 +215,7 @@ test('SE wiring: one event per action, gesture unlock, finish sequence and immed
       return result;
     };
   });
-  await expect(page.locator('#sound-toggle')).toHaveAttribute('aria-pressed','false');
-  await page.locator('#sound-toggle').click();
+  await expect(page.locator('#sound-toggle')).toHaveAttribute('aria-pressed','true');
   await start(page);await complete(page,'en');
   const events=await page.evaluate(()=>window.__sounds);
   expect(events.filter(s=>s.event==='countdown')).toHaveLength(3);

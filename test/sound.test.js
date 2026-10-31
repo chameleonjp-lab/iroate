@@ -16,14 +16,14 @@ function fixture({reject = false} = {}) {
   return {storage,values,context,nodes,sound:new SoundEffects({storage,contextFactory:()=>context})};
 }
 
-test('OFF by default, unlock only after user opt-in; remembers setting and stops immediately', async () => {
+test('ON by default, waits for interaction to unlock; remembers OFF and stops immediately', async () => {
   const f = fixture();
-  assert.equal(f.sound.enabled, false);
+  assert.equal(f.sound.enabled, true);
   assert.equal(f.sound.play('correct'), false);
   assert.equal(f.sound.context, null);
-  await f.sound.setEnabled(true);
+  await f.sound.unlock();
   assert.equal(f.context.state,'running');
-  assert.equal(f.values.get(SOUND_PREFERENCE_KEY),'true');
+  assert.equal(f.values.has(SOUND_PREFERENCE_KEY),false);
   assert.equal(f.sound.play('correct'),true);
   assert.ok(f.sound.activeSounds.size > 0);
   const pending = f.sound.setEnabled(false);
@@ -31,6 +31,19 @@ test('OFF by default, unlock only after user opt-in; remembers setting and stops
   assert.ok(f.nodes.every(n=>n.stopped));
   await pending;
   assert.equal(new SoundEffects({storage:f.storage}).enabled,false);
+});
+
+test('saved OFF is respected without unlocking; missing, invalid or blocked preferences default to ON', async () => {
+  for (const [saved,enabled] of [[null,true],['true',true],['false',false],['invalid',true]]) {
+    let created=0;
+    const sound=new SoundEffects({storage:{getItem:()=>saved},contextFactory(){created++;return null;}});
+    assert.equal(sound.enabled,enabled,`saved=${saved}`);
+    assert.equal(sound.context,null);
+    if(!enabled) assert.equal(await sound.unlock(),false);
+    assert.equal(created,0);
+  }
+  assert.equal(new SoundEffects({storage:null}).enabled,true);
+  assert.equal(new SoundEffects({storage:{getItem(){throw Error('blocked')}}}).enabled,true);
 });
 
 test('all required events are short and rapid answers cannot accumulate voices', async () => {
