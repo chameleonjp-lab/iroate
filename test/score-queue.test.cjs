@@ -41,3 +41,30 @@ test('missing or malformed accepted flag retains the same UUID for a later valid
   assert.equal(reload.list().length,0);assert.equal(calls.length,2);assert.deepEqual(calls[0],calls[1]);
  }
 });
+
+
+test('mismatched storage key cannot inject another finalized UUID',async()=>{
+ const disk=storage();let calls=0;
+ disk.setItem('test:score-pending:v1:'+ID2,JSON.stringify({id:ID,state:'pending',payload:{p_submission_id:ID,p_game_slug:'test',p_display_name:'Alice',p_client_version:'v1',p_score:10}}));
+ const q=createScoreQueue({gameSlug:'test',storage:disk,send:async()=>{calls++;return receipt(10)}});
+ assert.equal(q.list().length,0);await q.drain();assert.equal(calls,0);
+ assert.notEqual(disk.getItem('test:score-pending:v1:'+ID2),null);
+});
+test('failed storage writes cannot replace current rejection with stale disk pending',async()=>{
+ const disk=storage();let calls=0;
+ const q=createScoreQueue({gameSlug:'test',storage:disk,uuid:()=>ID,send:async()=>{calls++;return {accepted:false}}});
+ q.enqueue(q.capture('Alice','v1'),10);
+ disk.setItem=()=>{throw Error('quota')};
+ await q.drain();assert.equal(q.list()[0].state,'rejected');
+ await q.drain();assert.equal(calls,1);
+});
+
+test('stored edits cannot replace this session finalized name or score for the same UUID',async()=>{
+ const disk=storage(),calls=[];
+ const q=createScoreQueue({gameSlug:'test',storage:disk,uuid:()=>ID,send:async p=>{calls.push(p);return receipt(p.p_score,p.p_display_name)}});
+ const item=q.enqueue(q.capture('Alice','v1'),10);
+ item.payload.p_display_name='Bob';item.payload.p_score=999;
+ disk.setItem(q.prefix+ID,JSON.stringify(item));
+ await q.drain();
+ assert.equal(calls[0].p_display_name,'Alice');assert.equal(calls[0].p_score,10);
+});

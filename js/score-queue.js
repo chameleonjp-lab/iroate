@@ -22,7 +22,7 @@
         if (storage) for (let i = 0; i < storage.length; i++) {
           const key = storage.key(i);
           if (!key?.startsWith(prefix)) continue;
-          try { const item = JSON.parse(storage.getItem(key)); if (valid(item)) memory.set(item.id, item); } catch { /* Preserve malformed data without sending it. */ }
+          try { const item = JSON.parse(storage.getItem(key)); if (valid(item) && key === prefix + item.id && !memory.has(item.id)) memory.set(item.id, item); } catch { /* Preserve malformed data without sending it. */ }
         }
       } catch { /* Memory contains records saved in this session. */ }
       return [...memory.values()].map(copy).sort((a,b) => a.createdAt - b.createdAt || a.id.localeCompare(b.id));
@@ -77,3 +77,4 @@
   if (typeof module === 'object' && module.exports) module.exports=api;
   root.CommonScoreQueue=api;
 })(typeof globalThis === 'object' ? globalThis : this);
+
