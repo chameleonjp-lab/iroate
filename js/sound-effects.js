@@ -1,4 +1,5 @@
 // Original synthesis inspired by Sainome; no recorded or third-party audio.
+export const SOUND_VOLUME_KEY = 'iroate:sound-volume:v1';
 export const SOUND_PREFERENCE_KEY = 'iroate:sound-enabled:v1';
 // [offset seconds, frequency Hz, duration seconds, waveform]
 export const SOUND_EVENTS = Object.freeze({
@@ -26,11 +27,21 @@ export class SoundEffects {
     this.contextFactory = contextFactory;
     this.enabled = true;
     try { this.enabled = storage?.getItem(SOUND_PREFERENCE_KEY) !== 'false'; } catch { /* Default ON; preserve saved OFF when readable. */ }
+    this.volume = 1;
+    try { const saved = storage?.getItem(SOUND_VOLUME_KEY); const value = Number(saved); if (saved != null && saved !== '' && Number.isFinite(value) && value >= 0 && value <= 1) this.volume = value; } catch {}
     this.context = null;
     this.masterGain = null;
     this.hidden = false;
     this.activeSounds = new Set();
     this.unlockPromise = null;
+  }
+
+  setVolume(value) {
+    if (!Number.isFinite(value) || value < 0 || value > 1) return;
+    this.volume = value;
+    try { this.storage?.setItem(SOUND_VOLUME_KEY, String(value)); } catch {}
+    try { this.masterGain?.gain.setValueAtTime(0.24 * value, this.context.currentTime); } catch {}
+    if (value === 0) this.stopActiveSounds();
   }
 
   async setEnabled(enabled) {
@@ -41,7 +52,7 @@ export class SoundEffects {
   }
 
   async unlock() {
-    if (!this.enabled || this.hidden) return false;
+    if (!this.enabled || this.volume === 0 || this.hidden) return false;
     if (this.unlockPromise) return this.unlockPromise;
     // Called directly from a trusted input handler, before its first await (iOS).
     this.unlockPromise = this.resumeContext();
@@ -60,14 +71,14 @@ export class SoundEffects {
         if (!context) return false;
         this.context = context;
         this.masterGain = context.createGain();
-        this.masterGain.gain.setValueAtTime(0.24, context.currentTime);
+        this.masterGain.gain.setValueAtTime(0.24 * this.volume, context.currentTime);
         this.masterGain.connect(context.destination);
         context.onstatechange = () => {
           if (context.state !== 'running') this.stopActiveSounds();
         };
       }
       if (['suspended', 'interrupted'].includes(this.context.state)) await this.context.resume();
-      if (!this.enabled || this.hidden) { await this.suspend(); return false; }
+      if (!this.enabled || this.volume === 0 || this.hidden) { await this.suspend(); return false; }
       return this.context.state === 'running';
     } catch { return false; }
   }
@@ -92,7 +103,7 @@ export class SoundEffects {
 
   play(event, {delay = 0, append = false} = {}) {
     const context = this.context;
-    if (!this.enabled || this.hidden || context?.state !== 'running' || !Object.hasOwn(SOUND_EVENTS, event)) return false;
+    if (!this.enabled || this.volume === 0 || this.hidden || context?.state !== 'running' || !Object.hasOwn(SOUND_EVENTS, event)) return false;
     const recipe = SOUND_EVENTS[event];
     if (!append || this.activeSounds.size + recipe.length > 12) this.stopActiveSounds();
     try {

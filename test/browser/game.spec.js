@@ -78,7 +78,7 @@ test('Japanese X share uses exact 20-question copy, black and white links, and r
   await page.locator('#language-select').selectOption('ja');
   const intro='イロアテ\n文字の「色」か「意味」を20問当てるタイムアタック！';
   for(const selector of ['#share-button','#copy-result-button']) {
-    await expect(page.locator(selector)).toHaveText('Xでシェアする');
+    await expect(page.locator(selector)).toHaveText('Xでシェア');
     await expect(page.locator(selector)).toHaveCSS('background-color','rgb(0, 0, 0)');
     await expect(page.locator(selector)).toHaveCSS('color','rgb(255, 255, 255)');
   }
@@ -88,8 +88,8 @@ test('Japanese X share uses exact 20-question copy, black and white links, and r
   await expect(page.locator('#ranking-status')).toHaveText('ランキングに反映しました');
   // Context menus and middle-click use href without invoking a normal click.
   const readyText=new URL(await page.locator('#copy-result-button').getAttribute('href')).searchParams.get('text');
-  expect(readyText).toContain('初回挑戦タイム：30.00秒');
-  expect(readyText).toContain('ベストタイム：');
+  expect(readyText).not.toContain('初回挑戦タイム：');
+  expect(readyText).not.toContain('ベストタイム：');
   await shareOnX(page,'#copy-result-button');
   const result=await page.evaluate(()=>window.__shares.at(-1));
   expect(result.startsWith(intro+'\n')).toBe(true);
@@ -370,4 +370,26 @@ test('rejected named result stays rejected after language change and sharing',as
   const share=await page.evaluate(()=>window.__shares.at(-1));
   expect(share).not.toContain('Temps du premier essai');
   expect(f.submissions).toHaveLength(1);expect(f.errors).toEqual([]);
+});
+
+test('mute as first gesture never initializes audio and zero volume survives reload',async({page})=>{
+  await page.addInitScript(()=>{window.__audioCreated=0;window.AudioContext=class{constructor(){window.__audioCreated++;throw Error('test boundary')}};});
+  await setup(page);
+  await page.click('#sound-toggle');
+  expect(await page.evaluate(()=>window.__audioCreated)).toBe(0);
+  await page.locator('#sound-volume').fill('0');
+  await page.reload();
+  await expect(page.locator('#sound-volume')).toHaveValue('0');
+  await expect(page.locator('#sound-toggle')).toHaveAttribute('aria-pressed','false');
+  await page.click('#sound-toggle');
+  expect(await page.evaluate(()=>window.__audioCreated)).toBe(0);
+});
+
+test('ranking retry reads records without submitting another play',async({page})=>{
+  const f=await setup(page,{readFailure:true});
+  await start(page,{name:''});await complete(page,'en');
+  const count=f.reads.length;
+  await page.click('#reload-ranking');
+  await expect.poll(()=>f.reads.length).toBeGreaterThan(count);
+  expect(f.submissions).toHaveLength(0);
 });

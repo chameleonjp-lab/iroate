@@ -10,9 +10,9 @@
 SEは初期ON。最初のユーザー操作でWeb Audioを有効にします。上部ボタンで切り替えでき、保存済みのON/OFF設定を優先します。OFF・非表示で音を停止します。選択、戻る、3/2/1、開始、正解、不正解、クリア、結果、自己ベスト、リタイアの短い合成音です。BGM・外部音源はありません。
 
 名前はホームで任意入力です。空欄ならスコアを送信せず、ゲーム開始回数だけを匿名で計測します。名前を入れた場合は、名前とクリア記録が公開ランキングに登録されます。保存済みの名前も欄を空にして開始すると解除できます。名前の有無やリタイアにかかわらず、結果には初回/ベストを各最大30名表示します。
-ホームと結果の「ランキング詳細」は https://chameleonjp-lab.github.io/chameleonjp_lab/ranking.html?game=iroate へ進みます。
+ホームと結果の「ランキング」は https://chameleonjp-lab.github.io/chameleonjp_lab/ranking.html?game=iroate へ進みます。
 
-ホームと結果の共有は黒地・白文字の「Xでシェアする」リンクからXの投稿画面へ進みます。紹介文は選択言語へ翻訳し、問題数はゲームの全20問と一致させます。結果では最終タイムなどの記録も添え、実際の投稿はX上で利用者が行います。ランキング通信に失敗しても共有できます。
+ホームと結果の共有は黒地・白文字の「Xでシェア」リンクからXの投稿画面へ進みます。紹介文は選択言語へ翻訳し、問題数はゲームの全20問と一致させます。結果では最終タイムなどの記録も添え、実際の投稿はX上で利用者が行います。ランキング通信に失敗しても共有できます。
 
 ## ローカル開発とテスト
 
@@ -65,3 +65,5 @@ PRではテストとビルドだけ実行し、Pagesへの権限はmainのdeploy
 
 匿名呼び出しのため専用RPCは意図的に公開しています。対象slug/版を固定し、UUID重複を排除、直接テーブル権限を剥奪しRLSを有効化しています。匿名回数はユニーク利用者数や不正防止済み実プレイ数ではありません。
 [公開definerのAdvisor説明](https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable)と[RLSポリシーなしの説明](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy)は、この公開APIとdeny-all private tableの意図に照らして確認済みです。
+
+最新の共通仕様対応・検証範囲・残件は [対応記録](docs/common-spec-2026-10-31.md) を参照してください。

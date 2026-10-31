@@ -8,7 +8,7 @@ export default {
     "名前なしでも遊べます": "Có thể chơi không cần tên",
     "入力すると名前と記録が公開され、ランキングに参加します。空欄では回数のみ計測します。": "Nhập tên sẽ công khai tên và kết quả trên bảng xếp hạng. Để trống nếu chỉ muốn đếm lượt chơi.",
     "名前は20文字以内で入力してください。": "Vui lòng nhập tên tối đa 20 ký tự.",
-    "ランキング詳細": "Bảng xếp hạng đầy đủ",
+    "ランキング詳細": "Bảng xếp hạng",
     "ランキング上位30名": "Bảng xếp hạng: 30 người đứng đầu",
     "ランキングを読み込んでいます…": "Đang tải bảng xếp hạng…",
     "ランキングを取得できませんでした。": "Không thể tải bảng xếp hạng.",
@@ -101,7 +101,10 @@ export default {
     "効果音を切り替え": "Bật hoặc tắt hiệu ứng âm thanh",
     "イロアテ ランキング連携エラー": "Lỗi kết nối bảng xếp hạng Iroate",
     "言語": "Ngôn ngữ",
-    "ランキング記録はサーバーに保存されます。旧URLのブラウザ内の名前・自己ベストは、新URLへ自動では移りません。": "Kỷ lục xếp hạng được lưu trên máy chủ. Tên và kỷ lục cá nhân lưu trong trình duyệt tại URL cũ không tự động chuyển sang URL mới."
+    "ランキング記録はサーバーに保存されます。旧URLのブラウザ内の名前・自己ベストは、新URLへ自動では移りません。": "Kỷ lục xếp hạng được lưu trên máy chủ. Tên và kỷ lục cá nhân lưu trong trình duyệt tại URL cũ không tự động chuyển sang URL mới.",
+    "音量": "Âm lượng",
+    "共有文をコピー": "Sao chép nội dung chia sẻ",
+    "再試行": "Thử lại"
   },
   "colors": {
     "red": "Đỏ",

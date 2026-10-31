@@ -13,6 +13,7 @@
     <label for="language-select" data-i18n>言語</label>
     <select id="language-select" aria-label="言語を選択" data-i18n-attrs="aria-label"></select>
     <button id="sound-toggle" type="button" aria-pressed="true" aria-label="効果音を切り替え" data-i18n-attrs="aria-label"><span aria-hidden="true" id="sound-icon">🔊</span> <span id="sound-label" data-i18n>効果音 オン</span></button>
+  <label class="volume-control"><span data-i18n>音量</span><input id="sound-volume" type="range" min="0" max="100" step="1" value="100" aria-label="音量" data-i18n-attrs="aria-label"></label>
   </header>
   <main class="app">
     <section id="title-screen" class="screen screen-active">
@@ -29,8 +30,9 @@
         </div>
         <button class="primary-button" id="start-button" data-i18n>スタート</button>
         <button class="secondary-button" id="rules-button" data-i18n>ルール説明</button>
-        <a class="secondary-button link-button x-share-button" id="share-button" href="https://x.com/intent/tweet" target="_blank" rel="noopener noreferrer" data-i18n>Xでシェアする</a>
-        <a class="secondary-button link-button" id="other-games-link" href="https://chameleonjp-lab.github.io/chameleonjp_lab/ranking.html?game=iroate" data-i18n>ランキング詳細</a>
+        <a class="secondary-button link-button x-share-button" id="share-button" href="https://x.com/intent/tweet" target="_blank" rel="noopener noreferrer" data-i18n="Xでシェアする">Xでシェア</a>
+        <button class="secondary-button" id="copy-home-share" type="button" data-i18n>共有文をコピー</button>
+        <a class="secondary-button link-button" id="other-games-link" href="https://chameleonjp-lab.github.io/chameleonjp_lab/ranking.html?game=iroate" data-i18n="ランキング詳細">ランキング</a>
       </div>
     </section>
 
@@ -113,7 +115,8 @@
           </div>
         </dl>
         <p class="best-message" id="best-message"></p>
-        <a class="primary-button link-button x-share-button" id="copy-result-button" href="https://x.com/intent/tweet" target="_blank" rel="noopener noreferrer" data-i18n>Xでシェアする</a>
+        <a class="primary-button link-button x-share-button" id="copy-result-button" href="https://x.com/intent/tweet" target="_blank" rel="noopener noreferrer" data-i18n="Xでシェアする">Xでシェア</a>
+        <button class="secondary-button" id="copy-result-share" type="button" data-i18n>共有文をコピー</button>
         <button class="primary-button" id="retry-button" data-i18n>もう一度プレイ</button>
         <button class="secondary-button" id="result-title-button" data-i18n>タイトルへ戻る</button>
 
@@ -151,7 +154,8 @@
           </div>
           <p id="ranking-read-status" role="status"></p>
           <ol class="ranking-list" id="ranking-list"></ol>
-          <a class="secondary-button link-button" id="ranking-detail-link" href="https://chameleonjp-lab.github.io/chameleonjp_lab/ranking.html?game=iroate" data-i18n>ランキング詳細</a>
+          <button type="button" class="secondary-button" id="reload-ranking" data-i18n>再試行</button>
+          <a class="secondary-button link-button" id="ranking-detail-link" href="https://chameleonjp-lab.github.io/chameleonjp_lab/ranking.html?game=iroate" data-i18n="ランキング詳細">ランキング</a>
         </div>
       </div>
     </section>

@@ -238,7 +238,9 @@ function buildRankingErrorText(error) {
   ].filter(Boolean).join("\n");
 }
 
+let rankingRequestId = 0;
 async function loadRankings(requestRound) {
+  const requestId = ++rankingRequestId;
   rankingPanel.hidden = false;
   rankingList.hidden = true;
   setTranslatedText(rankingReadStatus, 'ランキングを読み込んでいます…');
@@ -248,7 +250,7 @@ async function loadRankings(requestRound) {
       rankingRpc(client, 'get_best_score_ranking', {p_game_slug: GAME_SLUG, p_limit: 30}),
       rankingRpc(client, 'get_first_try_ranking', {p_game_slug: GAME_SLUG, p_limit: 30})
     ]);
-    if (requestRound !== roundId) return;
+    if (requestRound !== roundId || requestId !== rankingRequestId) return;
     if (best.error || first.error) throw best.error || first.error;
     if (!Array.isArray(best.data) || !Array.isArray(first.data)) throw new Error('Invalid ranking response');
     bestRankingRows = best.data.slice(0, 30);
@@ -257,7 +259,7 @@ async function loadRankings(requestRound) {
     rankingList.hidden = false;
     renderRankingList();
   } catch (error) {
-    if (requestRound !== roundId) return;
+    if (requestRound !== roundId || requestId !== rankingRequestId) return;
     setTranslatedText(rankingReadStatus, 'ランキングを取得できませんでした。');
   }
 }
@@ -617,14 +619,7 @@ function buildResultCopyText() {
     t('最終タイム：{0}', {0: finalTimeText.textContent})
   ];
 
-  if (latestRankingResult) {
-    lines.push(t("初回挑戦タイム：{0}", {0: formatScoreValue(latestRankingResult.result_first_score)}));
-    lines.push(t("ベストタイム：{0}", {0: formatScoreValue(latestRankingResult.result_best_score)}));
-  } else {
-    lines.push(t("クリアタイム：{0}", {0: clearTimeText.textContent}));
-    lines.push(t("ミス：{0}", {0: missCountText.textContent}));
-    lines.push(t("ペナルティ：{0}", {0: penaltyTimeText.textContent}));
-  }
+  lines.push(t("ミス：{0}", {0: missCountText.textContent}));
 
   return buildShareText(lines);
 }
@@ -638,7 +633,7 @@ async function copyTextToClipboard(text) {
   try {
     await navigator.clipboard.writeText(text);
   } catch (_error) {
-    fallbackCopyText(text);
+    if (!fallbackCopyText(text)) return;
   }
 
   showToast("クリップボードにコピーしました");
@@ -668,8 +663,11 @@ function fallbackCopyText(text) {
   textArea.style.top = "-9999px";
   document.body.appendChild(textArea);
   textArea.select();
-  document.execCommand("copy");
+  let copied = false;
+  try { copied = document.execCommand("copy"); } catch {}
   document.body.removeChild(textArea);
+  if (!copied) window.prompt(t("共有文をコピー"), text);
+  return copied;
 }
 
 function showToast(message) {
@@ -804,7 +802,7 @@ soundToggle.addEventListener('click', () => {
 });
 
 // Unlock directly from trusted interaction, with no dependency in game timing.
-for (const name of ['pointerdown', 'keydown', 'click']) document.addEventListener(name, () => { void soundEffects.unlock(); }, {capture:true});
+for (const name of ['pointerdown', 'keydown', 'click']) document.addEventListener(name, event => { if (!event.target.closest('#sound-toggle, #sound-volume')) void soundEffects.unlock(); }, {capture:true});
 document.addEventListener('visibilitychange', () => soundEffects.handleVisibility(document.hidden));
 window.addEventListener('pagehide', () => soundEffects.handleVisibility(true));
 window.addEventListener('pageshow', () => soundEffects.handleVisibility(document.hidden));
@@ -823,3 +821,11 @@ timer.textContent = formatSeconds(0);
 
 playerNameInput.value = getSavedPlayerName();
 void guestPlays.retry();
+
+const volumeControl = document.getElementById('sound-volume');
+volumeControl.value = String(soundEffects.volume * 100);
+volumeControl.addEventListener('input', () => { soundEffects.setVolume(Number(volumeControl.value) / 100); });
+document.getElementById('copy-home-share').addEventListener('click', () => copyTextToClipboard(buildShareText()));
+document.getElementById('copy-result-share').addEventListener('click', () => copyTextToClipboard(resultState ? buildResultCopyText() : buildShareText()));
+
+document.getElementById('reload-ranking').addEventListener('click', () => { void loadRankings(roundId); });

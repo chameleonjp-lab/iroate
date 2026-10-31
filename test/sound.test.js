@@ -78,3 +78,17 @@ test('hidden tab, blocked Web Audio, throwing storage and rejected resume never 
   ok.sound.handleVisibility(false);await ok.sound.unlock();
   assert.equal(ok.sound.play('correct'),true);
 });
+
+test('volume defaults to existing level, persists zero, and prevents unlocking at zero', async () => {
+  const f=fixture();
+  assert.equal(f.sound.volume,1);
+  await f.sound.unlock();f.sound.play('correct');
+  f.sound.setVolume(0);
+  assert.equal(f.sound.activeSounds.size,0);
+  assert.equal(f.sound.play('correct'),false);
+  const restored=new SoundEffects({storage:f.storage,contextFactory(){throw Error('must not create')}});
+  assert.equal(restored.volume,0);
+  assert.equal(await restored.unlock(),false);
+  restored.setVolume(0.4);
+  assert.equal(new SoundEffects({storage:f.storage}).volume,0.4);
+});

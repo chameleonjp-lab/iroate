@@ -8,7 +8,7 @@ export default {
     "名前なしでも遊べます": "Anda bisa bermain tanpa nama",
     "入力すると名前と記録が公開され、ランキングに参加します。空欄では回数のみ計測します。": "Jika nama diisi, nama dan hasil Anda akan dipublikasikan di papan peringkat. Kosongkan untuk menghitung permainan saja.",
     "名前は20文字以内で入力してください。": "Masukkan nama maksimal 20 karakter.",
-    "ランキング詳細": "Papan peringkat lengkap",
+    "ランキング詳細": "Peringkat",
     "ランキング上位30名": "Peringkat: 30 pemain teratas",
     "ランキングを読み込んでいます…": "Memuat papan peringkat…",
     "ランキングを取得できませんでした。": "Tidak dapat memuat papan peringkat.",
@@ -101,7 +101,10 @@ export default {
     "効果音を切り替え": "Alihkan efek suara",
     "イロアテ ランキング連携エラー": "Kesalahan koneksi papan peringkat Iroate",
     "言語": "Bahasa",
-    "ランキング記録はサーバーに保存されます。旧URLのブラウザ内の名前・自己ベストは、新URLへ自動では移りません。": "Catatan papan peringkat disimpan di server. Nama dan rekor pribadi di browser pada URL lama tidak dipindahkan secara otomatis ke URL baru."
+    "ランキング記録はサーバーに保存されます。旧URLのブラウザ内の名前・自己ベストは、新URLへ自動では移りません。": "Catatan papan peringkat disimpan di server. Nama dan rekor pribadi di browser pada URL lama tidak dipindahkan secara otomatis ke URL baru.",
+    "音量": "Volume",
+    "共有文をコピー": "Salin teks berbagi",
+    "再試行": "Coba lagi"
   },
   "colors": {
     "red": "Merah",

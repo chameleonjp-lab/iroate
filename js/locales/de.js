@@ -8,7 +8,7 @@ export default {
     "名前なしでも遊べます": "Du kannst ohne Namen spielen",
     "入力すると名前と記録が公開され、ランキングに参加します。空欄では回数のみ計測します。": "Mit einem Namen werden dein Name und deine Ergebnisse in der Rangliste veröffentlicht. Ohne Namen werden nur die Runden gezählt.",
     "名前は20文字以内で入力してください。": "Bitte verwende einen Namen mit höchstens 20 Zeichen.",
-    "ランキング詳細": "Vollständige Rangliste",
+    "ランキング詳細": "Rangliste",
     "ランキング上位30名": "Rangliste: die besten 30",
     "ランキングを読み込んでいます…": "Rangliste wird geladen…",
     "ランキングを取得できませんでした。": "Die Rangliste konnte nicht geladen werden.",
@@ -101,7 +101,10 @@ export default {
     "効果音を切り替え": "Soundeffekte umschalten",
     "イロアテ ランキング連携エラー": "Iroate-Ranglistenverbindungsfehler",
     "言語": "Sprache",
-    "ランキング記録はサーバーに保存されます。旧URLのブラウザ内の名前・自己ベストは、新URLへ自動では移りません。": "Ranglisteneinträge werden auf dem Server gespeichert. Im Browser unter der alten URL gespeicherte Namen und persönliche Rekorde werden nicht automatisch zur neuen URL übertragen."
+    "ランキング記録はサーバーに保存されます。旧URLのブラウザ内の名前・自己ベストは、新URLへ自動では移りません。": "Ranglisteneinträge werden auf dem Server gespeichert. Im Browser unter der alten URL gespeicherte Namen und persönliche Rekorde werden nicht automatisch zur neuen URL übertragen.",
+    "音量": "Lautstärke",
+    "共有文をコピー": "Text zum Teilen kopieren",
+    "再試行": "Erneut versuchen"
   },
   "colors": {
     "red": "Rot",
