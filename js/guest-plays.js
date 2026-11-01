@@ -8,7 +8,7 @@ export function createGuestPlayCounter({storage=defaultStorage(),send,uuid=()=>c
     try {
       return Array.from({length:storage?.length??0},(_,i)=>storage.key(i))
         .filter(key=>key?.startsWith(GUEST_PENDING_PREFIX)).map(key=>{
-          try {return JSON.parse(storage.getItem(key));} catch {return null;}
+          try {const row=JSON.parse(storage.getItem(key));return key===GUEST_PENDING_PREFIX+row?.startId?row:null;} catch {return null;}
         }).filter(row=>row && validUuid(row.startId) && (row.permanentFailure===undefined || typeof row.permanentFailure==='boolean'));
     } catch {return [];}
   }
@@ -46,6 +46,8 @@ export function createGuestPlayCounter({storage=defaultStorage(),send,uuid=()=>c
       let startId;
       try {startId=uuid();} catch {return null;}
       if(!validUuid(startId))return null;
+      if(pending.some(row=>row.startId===startId))return null;
+      try {if(storage?.getItem(GUEST_PENDING_PREFIX+startId)!=null)return null;}catch{/* Unavailable storage still allows an in-memory anonymous start. */}
       const row={startId};pending.push(row);persist(row);
       onStatus(startId,'pending');
       if(inFlight)followUp=true;

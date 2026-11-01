@@ -65,19 +65,27 @@ export class SoundEffects {
       if (this.context?.state === 'closed') {
         this.stopActiveSounds();
         this.context = null;
+        try {this.masterGain?.disconnect();} catch {}
+        this.masterGain = null;
       }
       if (!this.context) {
         const context = this.contextFactory();
         if (!context) return false;
         this.context = context;
-        this.masterGain = context.createGain();
-        this.masterGain.gain.setValueAtTime(0.24 * this.volume, context.currentTime);
-        this.masterGain.connect(context.destination);
         context.onstatechange = () => {
           if (context.state !== 'running') this.stopActiveSounds();
         };
       }
-      if (['suspended', 'interrupted'].includes(this.context.state)) await this.context.resume();
+      if (!this.masterGain) {
+        let gain;
+        try {
+          gain=this.context.createGain();
+          gain.gain.setValueAtTime(0.24 * this.volume, this.context.currentTime);
+          gain.connect(this.context.destination);
+          this.masterGain=gain;
+        } catch (error) {try {gain?.disconnect();}catch{}throw error;}
+      }
+      if (['suspended', 'interrupted'].includes(this.context.state)) { this.stopActiveSounds();await this.context.resume(); }
       if (!this.enabled || this.volume === 0 || this.hidden) { await this.suspend(); return false; }
       return this.context.state === 'running';
     } catch { return false; }
@@ -110,7 +118,14 @@ export class SoundEffects {
       for (const [offset, frequency, duration, type] of recipe) {
         const when = context.currentTime + delay + offset;
         const node = context.createOscillator();
-        const gain = context.createGain();
+        let gain;
+        const sound = {node, cleanup: () => {
+          if (!this.activeSounds.delete(sound)) return;
+          try { node.disconnect(); } catch {}
+          try { gain?.disconnect(); } catch {}
+        }};
+        this.activeSounds.add(sound);
+        gain = context.createGain();
         node.type = type;
         node.frequency.setValueAtTime(frequency, when);
         gain.gain.setValueAtTime(0.0001, when);
@@ -118,11 +133,6 @@ export class SoundEffects {
         gain.gain.exponentialRampToValueAtTime(0.0001, when + duration);
         node.connect(gain);
         gain.connect(this.masterGain);
-        const sound = {node, cleanup: () => {
-          if (!this.activeSounds.delete(sound)) return;
-          try { node.disconnect(); gain.disconnect(); } catch { /* Audio context lost. */ }
-        }};
-        this.activeSounds.add(sound);
         node.addEventListener('ended', sound.cleanup, {once:true});
         node.start(when);
         node.stop(when + duration + 0.01);

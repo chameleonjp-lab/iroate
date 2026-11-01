@@ -1,8 +1,9 @@
-import {cp,mkdir,readFile,rm,writeFile} from 'node:fs/promises';
+import {cp,mkdir,readFile,rename,writeFile} from 'node:fs/promises';
 import {execFileSync} from 'node:child_process';
 const commit = process.env.GITHUB_SHA || execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
 if(!/^[a-f0-9]{40}$/.test(commit)) throw new Error('Expected a full source commit SHA');
-await rm('dist',{recursive:true,force:true});
+await mkdir('.build-backups',{recursive:true});
+try { await rename('dist', `.build-backups/dist-${Date.now()}-${process.pid}`); } catch (error) { if(error.code !== 'ENOENT') throw error; }
 await mkdir('dist/vendor',{recursive:true});
 for(const file of ['index.html','styles.css','js']) await cp(file,`dist/${file}`,{recursive:true});
 await cp('node_modules/@supabase/supabase-js/dist/umd/supabase.js','dist/vendor/supabase.js');

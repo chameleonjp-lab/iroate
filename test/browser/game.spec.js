@@ -413,3 +413,15 @@ test('named lost acknowledgement survives reload with the same consent and recei
   expect(f.submissions).toHaveLength(2);
   expect(f.errors).toEqual([]);
 });
+
+test('quota leaves the finalized score unsent, retry persists same UUID and reload never repeats acceptance',async({page})=>{
+ const f=await setup(page);await page.locator('#language-select').selectOption('en');await start(page);
+ await page.evaluate(()=>{window.originalSet=Storage.prototype.setItem;Storage.prototype.setItem=function(k,v){if(k.startsWith('iroate:score-pending:'))throw Error('quota');return originalSet.call(this,k,v)}});
+ await complete(page,'en');await expect(page.locator('#ranking-status')).toHaveText(translate('結果をこのブラウザに保存できません。画面を閉じずに再試行してください。',{},'en'));expect(f.submissions).toHaveLength(0);
+ const score=await page.locator('#final-time').textContent();await page.evaluate(()=>Storage.prototype.setItem=originalSet);await page.click('#retry-score');await expect.poll(()=>f.submissions.length).toBe(1);await expect(page.locator('#ranking-status')).toHaveText(translate('ランキングに反映しました',{},'en'));expect(await page.locator('#final-time').textContent()).toBe(score);
+ const payload=f.submissions[0],raw=await page.evaluate(id=>localStorage.getItem('iroate:score-pending:v1:'+id),payload.p_submission_id);expect(JSON.parse(raw).state).toBe('submitted');await page.reload();await expect(page.locator('#title-screen')).toBeVisible();expect(f.submissions).toHaveLength(1);expect(await page.evaluate(id=>localStorage.getItem('iroate:score-pending:v1:'+id),payload.p_submission_id)).toBe(raw);expect(f.errors).toEqual([]);
+});
+
+test('Safari composition 229 does not begin countdown',async({page})=>{const f=await setup(page);await page.locator('#player-name-input').fill('変換');await page.locator('#player-name-input').dispatchEvent('keydown',{key:'Enter',keyCode:229,isComposing:false});await expect(page.locator('#title-screen')).toBeVisible();expect(f.submissions).toHaveLength(0);expect(f.guestStarts).toHaveLength(0);});
+
+test('corrupt presentation is preserved without claiming a completed result',async({page})=>{const f=await setup(page,{failure:true});await page.locator('#language-select').selectOption('en');await start(page);await complete(page,'en');await expect(page.locator('#retry-score')).toBeVisible();const key='iroate:score-pending:v1:'+f.submissions[0].p_submission_id;const raw=await page.evaluate(key=>{const item=JSON.parse(localStorage.getItem(key));item.presentation.finishedTime=-4;item.presentation.missCount='bad';const raw=JSON.stringify(item);localStorage.setItem(key,raw);return raw},key);await page.reload();await expect(page.locator('#title-screen')).toBeVisible();await expect.poll(()=>f.submissions.length).toBe(2);expect(await page.evaluate(key=>JSON.parse(localStorage.getItem(key)).presentation.finishedTime,key)).toBe(-4);expect(f.errors).toEqual([]);});

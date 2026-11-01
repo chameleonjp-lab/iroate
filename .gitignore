@@ -6,3 +6,5 @@ playwright-report/
 vendor/
 
 supabase/.temp/
+
+.build-backups/

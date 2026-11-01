@@ -251,6 +251,10 @@ function buildRankingErrorText(error) {
   ].filter(Boolean).join("\n");
 }
 
+function validateRankingRows(rows, scoreKey) {
+  if (!Array.isArray(rows) || rows.some(row => !row || !Number.isSafeInteger(row.rank_no) || row.rank_no < 1 || typeof row.display_name !== 'string' || !Number.isSafeInteger(row[scoreKey]))) throw new Error('Invalid ranking response');
+  return rows;
+}
 let rankingRequestId = 0;
 async function loadRankings(requestRound) {
   const requestId = ++rankingRequestId;
@@ -265,7 +269,7 @@ async function loadRankings(requestRound) {
     ]);
     if (requestRound !== roundId || requestId !== rankingRequestId) return;
     if (best.error || first.error) throw best.error || first.error;
-    if (!Array.isArray(best.data) || !Array.isArray(first.data)) throw new Error('Invalid ranking response');
+    validateRankingRows(best.data, 'best_score');validateRankingRows(first.data, 'first_score');
     bestRankingRows = best.data.slice(0, 30);
     firstRankingRows = first.data.slice(0, 30);
     setTranslatedText(rankingReadStatus, '');
@@ -280,8 +284,9 @@ async function loadRankings(requestRound) {
 function onScoreQueueChange(item, receipt) {
   if (item.id !== scorePlay?.id || currentScreen !== 'result') return;
   const retry = document.getElementById('retry-score');
-  retry.hidden = item.state !== 'pending';
-  if (item.state === 'sending') setTranslatedText(rankingStatus, 'ランキング送信中です…');
+  retry.hidden = !['pending','sending'].includes(item.state);
+  if (item.persisted === false) { retry.hidden=false;setTranslatedText(rankingStatus, '結果をこのブラウザに保存できません。画面を閉じずに再試行してください。'); }
+  else if (item.state === 'sending') setTranslatedText(rankingStatus, 'ランキング送信中です…');
   else if (item.state === 'submitted') {
     latestRankingResult = receipt;
     renderRankingSummary(latestResultScore);
@@ -712,7 +717,7 @@ function getBestTime() {
 }
 
 function saveBestTime(bestTime) {
-  try { localStorage.setItem(BEST_TIME_STORAGE_KEY, JSON.stringify(bestTime)); return true; }
+  try { const raw=JSON.stringify(bestTime);localStorage.setItem(BEST_TIME_STORAGE_KEY, raw); return localStorage.getItem(BEST_TIME_STORAGE_KEY)===raw; }
   catch { return false; /* Ranking remains independent of local storage. */ }
 }
 
@@ -745,7 +750,7 @@ copyResultButton.addEventListener('click', prepareResultShareOnX);
 shareButton.addEventListener('click', updateShareLinks);
 playerNameInput.addEventListener('input', () => { const value=playerNameInput.value.trim(); if(value.length<=20) savePlayerName(value); });
 playerNameInput.addEventListener('keydown', event => {
-  if (event.key === 'Enter' && !event.isComposing) {event.preventDefault();beginStartFlow();}
+  if (event.key === 'Enter' && !event.isComposing && event.keyCode !== 229) {event.preventDefault();beginStartFlow();}
 });
 bestRankingTab.addEventListener("click", () => setRankingTab("best"));
 firstRankingTab.addEventListener("click", () => setRankingTab("first"));
@@ -843,12 +848,16 @@ document.getElementById('copy-result-share').addEventListener('click', () => cop
 
 document.getElementById('reload-ranking').addEventListener('click', () => { void loadRankings(roundId); });
 
+function validResultPresentation(item) {
+  const p=item?.presentation, r=p?.resultState;
+  return Boolean(p && Number.isFinite(p.finishedTime) && p.finishedTime >= 0 && Number.isSafeInteger(p.missCount) && p.missCount >= 0 && Number.isFinite(p.penaltySeconds) && p.penaltySeconds === p.missCount * PENALTY_SECONDS && Number.isSafeInteger(item.payload?.p_score) && item.payload.p_score === scoreForSeconds(p.finishedTime + p.penaltySeconds) && SUPPORTED_LANGUAGES.some(l => l.id === p.roundLanguage) && r && r.retired === false && typeof r.isNewBest === 'boolean' && typeof r.storageFailed === 'boolean' && (!r.isNewBest || (!r.storageFailed && (r.oldBest === null || p.finishedTime + p.penaltySeconds < r.oldBest?.finalTime))) && (r.oldBest === null || (typeof r.oldBest === 'object' && Number.isFinite(r.oldBest.finalTime) && r.oldBest.finalTime >= 0)));
+}
 // Restore only a finalized, consented score. In-progress and guest plays are never published.
-const restoredScore = scoreQueue.list().at(-1);
-if (restoredScore?.presentation?.resultState && Number.isFinite(restoredScore.presentation.finishedTime) && Number.isFinite(restoredScore.presentation.penaltySeconds)) {
+const restoredScore = scoreQueue.list().filter(validResultPresentation).at(-1);
+if (restoredScore) {
   scorePlay = {id:restoredScore.id,name:restoredScore.payload.p_display_name,clientVersion:restoredScore.payload.p_client_version};
   currentPlayerName = scorePlay.name;
-  ({finishedTime,penaltySeconds,missCount,resultState} = restoredScore.presentation);
+  ({finishedTime,penaltySeconds,missCount,resultState,roundLanguage} = restoredScore.presentation);
   latestResultScore = restoredScore.payload.p_score;
   scoreSubmitted = true;
   showScreen('result');renderResult();rankingStatus.hidden=false;onScoreQueueChange(restoredScore,null);void loadRankings(roundId);

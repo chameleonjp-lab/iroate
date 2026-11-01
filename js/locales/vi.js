@@ -1,6 +1,7 @@
 // Display text only; never use these strings for answer or score logic.
 export default {
   "messages": {
+    "結果をこのブラウザに保存できません。画面を閉じずに再試行してください。": "Không thể lưu kết quả trong trình duyệt này. Vui lòng giữ màn hình này mở và thử lại.",
     "Xでシェアする": "Chia sẻ lên X",
     "文字の「色」か「意味」を{0}問当てるタイムアタック！": "Đua với thời gian! Trả lời {0} câu hỏi về màu chữ hoặc nghĩa của từ!",
     "最終タイム：{0}": "Thời gian cuối cùng: {0}",

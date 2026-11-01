@@ -45,3 +45,7 @@ test('unavailable secure UUID generation cannot interrupt game start',()=>{
   const counter=createGuestPlayCounter({storage:null,uuid(){throw Error('crypto unavailable')},send:async()=>{assert.fail('No request without a secure ID')}});
   assert.doesNotThrow(()=>assert.equal(counter.record(),null));
 });
+
+test('mismatched guest storage key/body UUID is preserved and never sent',async()=>{const disk=storage(),raw=JSON.stringify({startId:ids[1]});disk.setItem(GUEST_PENDING_PREFIX+ids[0],raw);let count=0;await createGuestPlayCounter({storage:disk,send:async()=>count++}).retry();assert.equal(count,0);assert.equal(disk.getItem(GUEST_PENDING_PREFIX+ids[0]),raw)});
+
+test('guest UUID collision preserves existing failure or malformed raw and never sends a replacement',async()=>{for(const raw of [JSON.stringify({startId:ids[0],permanentFailure:true}),'broken']){const disk=storage();disk.setItem(GUEST_PENDING_PREFIX+ids[0],raw);let calls=0;const counter=createGuestPlayCounter({storage:disk,uuid:()=>ids[0],send:async()=>calls++});assert.equal(counter.record(),null);await counter.retry();assert.equal(calls,0);assert.equal(disk.getItem(GUEST_PENDING_PREFIX+ids[0]),raw)}});

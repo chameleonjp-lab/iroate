@@ -1,6 +1,7 @@
 // Display text only; never use these strings for answer or score logic.
 export default {
   "messages": {
+    "結果をこのブラウザに保存できません。画面を閉じずに再試行してください。": "Impossibile salvare il risultato in questo browser. Non chiudere questa schermata e riprova.",
     "Xでシェアする": "Condividi su X",
     "文字の「色」か「意味」を{0}問当てるタイムアタック！": "Contro il tempo: rispondi a {0} domande sul colore o sul significato delle parole!",
     "最終タイム：{0}": "Tempo finale: {0}",

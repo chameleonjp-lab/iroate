@@ -92,3 +92,9 @@ test('volume defaults to existing level, persists zero, and prevents unlocking a
   restored.setVolume(0.4);
   assert.equal(new SoundEffects({storage:f.storage}).volume,0.4);
 });
+
+test('partial allocation and independent disconnect failures clean every node',async()=>{const f=fixture();await f.sound.unlock();let oscillatorClean=0,gainClean=0;f.context.createOscillator=()=>({frequency:{setValueAtTime(){}},connect(){},disconnect(){oscillatorClean++;throw Error('lost')},start(){},stop(){},addEventListener(){}});f.context.createGain=()=>({gain:{setValueAtTime(){},exponentialRampToValueAtTime(){}},connect(){},disconnect(){gainClean++}});f.sound.play('select');f.sound.stopActiveSounds();assert.equal(gainClean,1);f.context.createGain=()=>{throw Error('allocation')};f.sound.play('select');assert.equal(oscillatorClean,2);assert.equal(f.sound.activeSounds.size,0)});
+
+test('interrupted context clears old voices before resume even before statechange delivery',async()=>{const f=fixture();await f.sound.unlock();f.sound.play('clear');assert.ok(f.sound.activeSounds.size);f.context.state='interrupted';await f.sound.unlock();assert.equal(f.sound.activeSounds.size,0)});
+
+test('transient master gain allocation failure retries setup before unlock reports success',async()=>{const f=fixture();let gains=0;const create=f.context.createGain;f.context.createGain=()=>{if(++gains===1)throw Error('temporary');return create()};assert.equal(await f.sound.unlock(),false);assert.equal(await f.sound.unlock(),true);assert.equal(gains,2);assert.ok(f.sound.masterGain);assert.equal(f.sound.play('select'),true)});
