@@ -98,3 +98,68 @@ test('partial allocation and independent disconnect failures clean every node',a
 test('interrupted context clears old voices before resume even before statechange delivery',async()=>{const f=fixture();await f.sound.unlock();f.sound.play('clear');assert.ok(f.sound.activeSounds.size);f.context.state='interrupted';await f.sound.unlock();assert.equal(f.sound.activeSounds.size,0)});
 
 test('transient master gain allocation failure retries setup before unlock reports success',async()=>{const f=fixture();let gains=0;const create=f.context.createGain;f.context.createGain=()=>{if(++gains===1)throw Error('temporary');return create()};assert.equal(await f.sound.unlock(),false);assert.equal(await f.sound.unlock(),true);assert.equal(gains,2);assert.ok(f.sound.masterGain);assert.equal(f.sound.play('select'),true)});
+
+// A resume requested before an activation-granting touch release may remain
+// pending. A later real user gesture must still get its own resume attempt.
+test('a pending early resume cannot block a later gesture from enabling SE', async () => {
+  const f = fixture();
+  const normalResume = f.context.resume.bind(f.context);
+  let releaseEarly;
+  let attempts = 0;
+  f.context.resume = () => ++attempts === 1
+    ? new Promise(resolve => { releaseEarly = resolve; })
+    : normalResume();
+  const early = f.sound.unlock();
+  const later = f.sound.unlock();
+  try {
+    assert.equal(attempts, 2, 'retry resume synchronously inside the later gesture');
+    assert.equal(await later, true);
+    assert.equal(f.sound.play('correct'), true);
+  } finally {
+    releaseEarly();
+    await early;
+  }
+});
+
+test('an old pending resume cannot restore sound after OFF, zero volume or hide', async () => {
+  for (const stop of [sound => sound.setEnabled(false), sound => sound.setVolume(0), sound => sound.handleVisibility(true)]) {
+    const f = fixture();
+    let release;
+    f.context.resume = () => new Promise(resolve => { release = () => { f.context.state = 'running'; resolve(); }; });
+    const pending = f.sound.unlock();
+    await stop(f.sound);
+    release();
+    assert.equal(await pending, false);
+    assert.equal(f.context.state, 'suspended');
+    assert.equal(f.sound.play('correct'), false);
+    assert.equal(f.sound.activeSounds.size, 0);
+  }
+});
+
+test('repeated gestures while running do not re-resume or stop the current SE', async () => {
+  const f = fixture();
+  let attempts = 0;
+  const resume = f.context.resume.bind(f.context);
+  f.context.resume = () => { attempts++; return resume(); };
+  await f.sound.unlock();
+  f.sound.play('clear');
+  const voices = [...f.sound.activeSounds];
+  for (let n = 0; n < 20; n++) await f.sound.unlock();
+  assert.equal(attempts, 1);
+  assert.equal(f.sound.activeSounds.size, 3);
+  assert.deepEqual([...f.sound.activeSounds], voices);
+});
+
+test('a closed context is replaced and later gestures can play again', async () => {
+  const f = fixture();
+  await f.sound.unlock();
+  f.sound.play('clear');
+  const next = fixture();
+  f.context.state = 'closed';
+  f.sound.contextFactory = () => next.context;
+  assert.equal(await f.sound.unlock(), true);
+  assert.equal(f.sound.context, next.context);
+  assert.equal(f.sound.activeSounds.size, 0);
+  assert.equal(f.sound.play('correct'), true);
+  assert.equal(next.nodes.length, 2);
+});

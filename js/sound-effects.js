@@ -33,7 +33,6 @@ export class SoundEffects {
     this.masterGain = null;
     this.hidden = false;
     this.activeSounds = new Set();
-    this.unlockPromise = null;
   }
 
   setVolume(value) {
@@ -53,11 +52,10 @@ export class SoundEffects {
 
   async unlock() {
     if (!this.enabled || this.volume === 0 || this.hidden) return false;
-    if (this.unlockPromise) return this.unlockPromise;
-    // Called directly from a trusted input handler, before its first await (iOS).
-    this.unlockPromise = this.resumeContext();
-    try { return await this.unlockPromise; }
-    finally { this.unlockPromise = null; }
+    // Each trusted gesture must reach resume synchronously. An earlier resume
+    // can stay pending when a touch pointerdown has not granted activation yet.
+    // Reusing that promise would prevent the later click from unlocking audio.
+    return this.resumeContext();
   }
 
   async resumeContext() {
