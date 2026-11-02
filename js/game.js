@@ -2,6 +2,7 @@ import { COLORS, TOTAL_QUESTIONS, PENALTY_SECONDS, SCORE_SCALE, createGameQuesti
 import { SUPPORTED_LANGUAGES, getLanguage, setLanguage, t, translate, colorName, applyTranslations, setTranslatedText } from './i18n.js';
 import {createGuestPlayCounter} from './guest-plays.js';
 import { SoundEffects } from './sound-effects.js';
+import './score-queue.js';
 import {buildXShareUrl} from './x-share.js';
 
 const soundEffects = new SoundEffects();
@@ -12,10 +13,11 @@ let roundLanguage = getLanguage();
 let roundId = 0;
 let resultState = null;
 let guestStartId = null;
+let scorePlay = null;
 let guestCountStatus = "counting";
 
 // Bound fetch and a deadline preserve Safari compatibility. Score writes are
-// never retried; anonymous start retries use their dedicated UUID-based queue.
+// retried with immutable receipt IDs; anonymous starts keep their separate queue.
 async function rankingRpc(client, name, parameters) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 8000);
@@ -30,6 +32,17 @@ const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_drzcy0v97knU6FgjqSgBHw_0A9XPdFM
 const GAME_SLUG = "iroate";
 const CLIENT_VERSION = "iroate-ranking-v1";
 const PUBLIC_URL = "https://chameleonjp-lab.github.io/iroate/";
+const scoreQueue = globalThis.CommonScoreQueue.createScoreQueue({
+  gameSlug: GAME_SLUG,
+  scoreOrder: 'asc',
+  storage: (() => { try { return localStorage; } catch { return null; } })(),
+  send: async payload => {
+    const {data, error} = await rankingRpc(getSupabaseClient(), 'submit_score_once_shared_v1', payload);
+    if (error) throw error;
+    return data;
+  },
+  onChange: onScoreQueueChange,
+});
 const screens = {
   title: document.getElementById("title-screen"),
   rules: document.getElementById("rules-screen"),
@@ -136,6 +149,7 @@ function beginStartFlow() {
   }
   // Capture the optional name once. A later edit cannot alter this round.
   currentPlayerName = name;
+  scorePlay = scoreQueue.capture(name, CLIENT_VERSION);
   savePlayerName(name);
   setTranslatedText(nameError, '');
   playerNameInput.blur(); // The 3-second countdown also lets the iOS keyboard close.
@@ -238,7 +252,13 @@ function buildRankingErrorText(error) {
   ].filter(Boolean).join("\n");
 }
 
+function validateRankingRows(rows, scoreKey) {
+  if (!Array.isArray(rows) || rows.some(row => !row || !Number.isSafeInteger(row.rank_no) || row.rank_no < 1 || typeof row.display_name !== 'string' || !Number.isSafeInteger(row[scoreKey]))) throw new Error('Invalid ranking response');
+  return rows;
+}
+let rankingRequestId = 0;
 async function loadRankings(requestRound) {
+  const requestId = ++rankingRequestId;
   rankingPanel.hidden = false;
   rankingList.hidden = true;
   setTranslatedText(rankingReadStatus, 'ランキングを読み込んでいます…');
@@ -248,17 +268,37 @@ async function loadRankings(requestRound) {
       rankingRpc(client, 'get_best_score_ranking', {p_game_slug: GAME_SLUG, p_limit: 30}),
       rankingRpc(client, 'get_first_try_ranking', {p_game_slug: GAME_SLUG, p_limit: 30})
     ]);
-    if (requestRound !== roundId) return;
+    if (requestRound !== roundId || requestId !== rankingRequestId) return;
     if (best.error || first.error) throw best.error || first.error;
-    if (!Array.isArray(best.data) || !Array.isArray(first.data)) throw new Error('Invalid ranking response');
+    validateRankingRows(best.data, 'best_score');validateRankingRows(first.data, 'first_score');
     bestRankingRows = best.data.slice(0, 30);
     firstRankingRows = first.data.slice(0, 30);
     setTranslatedText(rankingReadStatus, '');
     rankingList.hidden = false;
     renderRankingList();
   } catch (error) {
-    if (requestRound !== roundId) return;
+    if (requestRound !== roundId || requestId !== rankingRequestId) return;
     setTranslatedText(rankingReadStatus, 'ランキングを取得できませんでした。');
+  }
+}
+
+function onScoreQueueChange(item, receipt) {
+  if (item.id !== scorePlay?.id || currentScreen !== 'result') return;
+  const retry = document.getElementById('retry-score');
+  retry.hidden = !['pending','sending'].includes(item.state);
+  if (item.persisted === false) { retry.hidden=false;setTranslatedText(rankingStatus, '結果をこのブラウザに保存できません。画面を閉じずに再試行してください。'); }
+  else if (item.state === 'sending') setTranslatedText(rankingStatus, 'ランキング送信中です…');
+  else if (item.state === 'submitted') {
+    latestRankingResult = receipt;
+    renderRankingSummary(latestResultScore);
+    updateShareLinks();
+    setTranslatedText(rankingStatus, 'ランキングに反映しました');
+    void loadRankings(roundId);
+  } else {
+    setTranslatedText(rankingStatus, 'ランキング連携に失敗しました😅');
+    lastRankingErrorText = buildRankingErrorText({code:item.state});
+    try {localStorage.setItem('iroAteRankingLastError', lastRankingErrorText);} catch {}
+    copyRankingErrorButton.hidden = false;
   }
 }
 
@@ -266,6 +306,7 @@ async function syncScoreAndRankings(finalScore) {
   if (scoreSubmitted) return;
   scoreSubmitted = true;
   const requestRound = roundId;
+  document.getElementById('retry-score').hidden = true;
   if (!currentPlayerName) {
     rankingStatus.hidden = false;
     setTranslatedText(rankingStatus, '名前なしのプレイです。回数のみ計測し、スコアは登録しません。');
@@ -276,31 +317,10 @@ async function syncScoreAndRankings(finalScore) {
   if (finalScore === null) {await loadRankings(requestRound);return;}
   renderRankingSummary(finalScore);
   rankingStatus.hidden = false;
-  setTranslatedText(rankingStatus, 'ランキング送信中です…');
-  const initialRead = loadRankings(requestRound); // Viewing ranks never depends on a successful write.
-  try {
-    const {data, error} = await rankingRpc(getSupabaseClient(), 'submit_score', {
-      p_display_name: currentPlayerName, p_game_slug: GAME_SLUG,
-      p_score: finalScore, p_client_version: CLIENT_VERSION
-    });
-    if (requestRound !== roundId) return;
-    if (error) throw error;
-    const acceptedResult = normalizeRpcResult(data);
-    if (acceptedResult?.accepted !== true) throw new Error('Submission was not accepted');
-    latestRankingResult = acceptedResult;
-    renderRankingSummary(finalScore);
-    updateShareLinks();
-    setTranslatedText(rankingStatus, 'ランキングに反映しました');
-    await initialRead;
-    if (requestRound === roundId) await loadRankings(requestRound); // Include the newly accepted result.
-  } catch (error) {
-    if (requestRound !== roundId) return;
-    lastRankingErrorText = buildRankingErrorText(error);
-    try {localStorage.setItem('iroAteRankingLastError', lastRankingErrorText);} catch { /* Optional diagnostics. */ }
-    setTranslatedText(rankingStatus, 'ランキング連携に失敗しました😅');
-    copyRankingErrorButton.hidden = false;
-    await initialRead;
-  }
+  void loadRankings(requestRound);
+  if (!scorePlay) { setTranslatedText(rankingStatus, 'ランキング連携に失敗しました😅'); return; }
+  scoreQueue.enqueue(scorePlay, finalScore, {finishedTime, penaltySeconds, missCount, resultState, roundLanguage});
+  await scoreQueue.drain();
 }
 
 async function sendGuestStart(startId) {
@@ -617,14 +637,7 @@ function buildResultCopyText() {
     t('最終タイム：{0}', {0: finalTimeText.textContent})
   ];
 
-  if (latestRankingResult) {
-    lines.push(t("初回挑戦タイム：{0}", {0: formatScoreValue(latestRankingResult.result_first_score)}));
-    lines.push(t("ベストタイム：{0}", {0: formatScoreValue(latestRankingResult.result_best_score)}));
-  } else {
-    lines.push(t("クリアタイム：{0}", {0: clearTimeText.textContent}));
-    lines.push(t("ミス：{0}", {0: missCountText.textContent}));
-    lines.push(t("ペナルティ：{0}", {0: penaltyTimeText.textContent}));
-  }
+  lines.push(t("ミス：{0}", {0: missCountText.textContent}));
 
   return buildShareText(lines);
 }
@@ -638,7 +651,7 @@ async function copyTextToClipboard(text) {
   try {
     await navigator.clipboard.writeText(text);
   } catch (_error) {
-    fallbackCopyText(text);
+    if (!fallbackCopyText(text)) return;
   }
 
   showToast("クリップボードにコピーしました");
@@ -668,8 +681,11 @@ function fallbackCopyText(text) {
   textArea.style.top = "-9999px";
   document.body.appendChild(textArea);
   textArea.select();
-  document.execCommand("copy");
+  let copied = false;
+  try { copied = document.execCommand("copy"); } catch {}
   document.body.removeChild(textArea);
+  if (!copied) window.prompt(t("共有文をコピー"), text);
+  return copied;
 }
 
 function showToast(message) {
@@ -702,7 +718,7 @@ function getBestTime() {
 }
 
 function saveBestTime(bestTime) {
-  try { localStorage.setItem(BEST_TIME_STORAGE_KEY, JSON.stringify(bestTime)); return true; }
+  try { const raw=JSON.stringify(bestTime);localStorage.setItem(BEST_TIME_STORAGE_KEY, raw); return localStorage.getItem(BEST_TIME_STORAGE_KEY)===raw; }
   catch { return false; /* Ranking remains independent of local storage. */ }
 }
 
@@ -733,8 +749,9 @@ resultTitleButton.addEventListener("click", () => {
 retireButton.addEventListener("click", retireGame);
 copyResultButton.addEventListener('click', prepareResultShareOnX);
 shareButton.addEventListener('click', updateShareLinks);
+playerNameInput.addEventListener('input', () => { const value=playerNameInput.value.trim(); if(value.length<=20) savePlayerName(value); });
 playerNameInput.addEventListener('keydown', event => {
-  if (event.key === 'Enter' && !event.isComposing) {event.preventDefault();beginStartFlow();}
+  if (event.key === 'Enter' && !event.isComposing && event.keyCode !== 229) {event.preventDefault();beginStartFlow();}
 });
 bestRankingTab.addEventListener("click", () => setRankingTab("best"));
 firstRankingTab.addEventListener("click", () => setRankingTab("first"));
@@ -804,7 +821,7 @@ soundToggle.addEventListener('click', () => {
 });
 
 // Unlock directly from trusted interaction, with no dependency in game timing.
-for (const name of ['pointerdown', 'keydown', 'click']) document.addEventListener(name, () => { void soundEffects.unlock(); }, {capture:true});
+for (const name of ['pointerdown', 'keydown', 'click']) document.addEventListener(name, event => { if (!event.target.closest('#sound-toggle, #sound-volume')) void soundEffects.unlock(); }, {capture:true});
 document.addEventListener('visibilitychange', () => soundEffects.handleVisibility(document.hidden));
 window.addEventListener('pagehide', () => soundEffects.handleVisibility(true));
 window.addEventListener('pageshow', () => soundEffects.handleVisibility(document.hidden));
@@ -823,3 +840,29 @@ timer.textContent = formatSeconds(0);
 
 playerNameInput.value = getSavedPlayerName();
 void guestPlays.retry();
+
+const volumeControl = document.getElementById('sound-volume');
+volumeControl.value = String(soundEffects.volume * 100);
+volumeControl.addEventListener('input', () => { soundEffects.setVolume(Number(volumeControl.value) / 100); });
+document.getElementById('copy-home-share').addEventListener('click', () => copyTextToClipboard(buildShareText()));
+document.getElementById('copy-result-share').addEventListener('click', () => copyTextToClipboard(resultState ? buildResultCopyText() : buildShareText()));
+
+document.getElementById('reload-ranking').addEventListener('click', () => { void loadRankings(roundId); });
+
+function validResultPresentation(item) {
+  const p=item?.presentation, r=p?.resultState;
+  return Boolean(p && Number.isFinite(p.finishedTime) && p.finishedTime >= 0 && Number.isSafeInteger(p.missCount) && p.missCount >= 0 && Number.isFinite(p.penaltySeconds) && p.penaltySeconds === p.missCount * PENALTY_SECONDS && Number.isSafeInteger(item.payload?.p_score) && item.payload.p_score === scoreForSeconds(p.finishedTime + p.penaltySeconds) && SUPPORTED_LANGUAGES.some(l => l.id === p.roundLanguage) && r && r.retired === false && typeof r.isNewBest === 'boolean' && typeof r.storageFailed === 'boolean' && (!r.isNewBest || (!r.storageFailed && (r.oldBest === null || p.finishedTime + p.penaltySeconds < r.oldBest?.finalTime))) && (r.oldBest === null || (typeof r.oldBest === 'object' && Number.isFinite(r.oldBest.finalTime) && r.oldBest.finalTime >= 0)));
+}
+// Restore only a finalized, consented score. In-progress and guest plays are never published.
+const restoredScore = scoreQueue.list().filter(validResultPresentation).at(-1);
+if (restoredScore) {
+  scorePlay = {id:restoredScore.id,name:restoredScore.payload.p_display_name,clientVersion:restoredScore.payload.p_client_version};
+  currentPlayerName = scorePlay.name;
+  ({finishedTime,penaltySeconds,missCount,resultState,roundLanguage} = restoredScore.presentation);
+  latestResultScore = restoredScore.payload.p_score;
+  scoreSubmitted = true;
+  showScreen('result');renderResult();rankingStatus.hidden=false;onScoreQueueChange(restoredScore,null);void loadRankings(roundId);
+}
+document.getElementById('retry-score').addEventListener('click', () => { void scoreQueue.drain(); });
+window.addEventListener('online', () => { void scoreQueue.drain(); });
+void scoreQueue.drain();

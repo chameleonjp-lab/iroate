@@ -1,6 +1,7 @@
 // Display text only; never use these strings for answer or score logic.
 export default {
   "messages": {
+    "結果をこのブラウザに保存できません。画面を閉じずに再試行してください。": "Sonuç bu tarayıcıya kaydedilemiyor. Bu ekranı kapatmadan tekrar deneyin.",
     "Xでシェアする": "X'te paylaş",
     "文字の「色」か「意味」を{0}問当てるタイムアタック！": "Zamana karşı yarış! Kelimelerin rengini veya anlamını soran {0} soruyu yanıtla!",
     "最終タイム：{0}": "Son süre: {0}",
@@ -8,7 +9,7 @@ export default {
     "名前なしでも遊べます": "Adsız oynayabilirsiniz",
     "入力すると名前と記録が公開され、ランキングに参加します。空欄では回数のみ計測します。": "Ad girerseniz adınız ve sonuçlarınız sıralamada herkese açık olur. Boş bırakırsanız yalnızca oyun sayılır.",
     "名前は20文字以内で入力してください。": "En fazla 20 karakterlik bir ad girin.",
-    "ランキング詳細": "Tam sıralama",
+    "ランキング詳細": "Sıralama",
     "ランキング上位30名": "Sıralama: en iyi 30 oyuncu",
     "ランキングを読み込んでいます…": "Sıralama yükleniyor…",
     "ランキングを取得できませんでした。": "Sıralama yüklenemedi.",
@@ -101,7 +102,10 @@ export default {
     "効果音を切り替え": "Ses efektlerini değiştir",
     "イロアテ ランキング連携エラー": "Iroate sıralama bağlantı hatası",
     "言語": "Dil",
-    "ランキング記録はサーバーに保存されます。旧URLのブラウザ内の名前・自己ベストは、新URLへ自動では移りません。": "Sıralama kayıtları sunucuda saklanır. Eski URL’de tarayıcıya kaydedilen ad ve kişisel rekorlar yeni URL’ye otomatik taşınmaz."
+    "ランキング記録はサーバーに保存されます。旧URLのブラウザ内の名前・自己ベストは、新URLへ自動では移りません。": "Sıralama kayıtları sunucuda saklanır. Eski URL’de tarayıcıya kaydedilen ad ve kişisel rekorlar yeni URL’ye otomatik taşınmaz.",
+    "音量": "Ses düzeyi",
+    "共有文をコピー": "Paylaşım metnini kopyala",
+    "再試行": "Yeniden dene"
   },
   "colors": {
     "red": "Kırmızı",

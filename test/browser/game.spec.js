@@ -7,7 +7,7 @@ const rgb = hex => `rgb(${[1,3,5].map(n=>parseInt(hex.slice(n,n+2),16)).join(', 
 
 async function setup(page,{failure=false,delay=false,storageBlocked=false,audioBlocked=false,rows=2,guestFailure=false,invalidAck=false,readFailure=false,namedRejected=false}={}) {
   const errors=[],submissions=[], pending=[],guestStarts=[],reads=[];
-  const network={guestFailure};
+  const network={guestFailure,failure};
   page.on('pageerror',e=>errors.push(e.message));
   await page.addInitScript(({storageBlocked,audioBlocked})=>{
     if(storageBlocked) Object.defineProperty(window,'localStorage',{get(){throw new Error('blocked')}});
@@ -41,11 +41,11 @@ async function setup(page,{failure=false,delay=false,storageBlocked=false,audioB
       if(network.guestFailure)return route.fulfill({status:503,json:{message:'offline'}});
       return route.fulfill({json:{accepted:!invalidAck,start_id:body.p_start_id,game_slug:'iroate',client_version:'iroate-ranking-v1',play_id:'30000000-0000-4000-8000-000000000001'}});
     }
-    if(method==='submit_score') {
+    if(method==='submit_score_once_shared_v1') {
       const body=route.request().postDataJSON();submissions.push(body);
       if(delay) await new Promise(r=>pending.push(r));
-      if(failure) return route.fulfill({status:500,json:{message:'offline',code:'TEST'}});
-      return route.fulfill({json:[{accepted:!namedRejected,result_display_name:body.p_display_name,result_first_score:3000,result_best_score:body.p_score,result_play_count:3,is_first_play:false,is_new_best:true}]});
+      if(network.failure) return route.fulfill({status:500,json:{message:'offline',code:'TEST'}});
+      return route.fulfill({json:[{accepted:!namedRejected,result_normalized_name:body.p_display_name,result_display_name:body.p_display_name,result_first_score:3000,result_best_score:body.p_score,result_play_count:3,is_first_play:false,is_new_best:true,was_duplicate:false}]});
     }
     reads.push({method,...route.request().postDataJSON()});
     if(readFailure)return route.fulfill({status:500,json:{message:'ranking unavailable'}});
@@ -78,7 +78,7 @@ test('Japanese X share uses exact 20-question copy, black and white links, and r
   await page.locator('#language-select').selectOption('ja');
   const intro='イロアテ\n文字の「色」か「意味」を20問当てるタイムアタック！';
   for(const selector of ['#share-button','#copy-result-button']) {
-    await expect(page.locator(selector)).toHaveText('Xでシェアする');
+    await expect(page.locator(selector)).toHaveText('Xでシェア');
     await expect(page.locator(selector)).toHaveCSS('background-color','rgb(0, 0, 0)');
     await expect(page.locator(selector)).toHaveCSS('color','rgb(255, 255, 255)');
   }
@@ -88,8 +88,8 @@ test('Japanese X share uses exact 20-question copy, black and white links, and r
   await expect(page.locator('#ranking-status')).toHaveText('ランキングに反映しました');
   // Context menus and middle-click use href without invoking a normal click.
   const readyText=new URL(await page.locator('#copy-result-button').getAttribute('href')).searchParams.get('text');
-  expect(readyText).toContain('初回挑戦タイム：30.00秒');
-  expect(readyText).toContain('ベストタイム：');
+  expect(readyText).not.toContain('初回挑戦タイム：');
+  expect(readyText).not.toContain('ベストタイム：');
   await shareOnX(page,'#copy-result-button');
   const result=await page.evaluate(()=>window.__shares.at(-1));
   expect(result.startsWith(intro+'\n')).toBe(true);
@@ -371,3 +371,57 @@ test('rejected named result stays rejected after language change and sharing',as
   expect(share).not.toContain('Temps du premier essai');
   expect(f.submissions).toHaveLength(1);expect(f.errors).toEqual([]);
 });
+
+test('mute as first gesture never initializes audio and zero volume survives reload',async({page})=>{
+  await page.addInitScript(()=>{window.__audioCreated=0;window.AudioContext=class{constructor(){window.__audioCreated++;throw Error('test boundary')}};});
+  await setup(page);
+  await page.click('#sound-toggle');
+  expect(await page.evaluate(()=>window.__audioCreated)).toBe(0);
+  await page.locator('#sound-volume').fill('0');
+  await page.reload();
+  await expect(page.locator('#sound-volume')).toHaveValue('0');
+  await expect(page.locator('#sound-toggle')).toHaveAttribute('aria-pressed','false');
+  await page.click('#sound-toggle');
+  expect(await page.evaluate(()=>window.__audioCreated)).toBe(0);
+});
+
+test('ranking retry reads records without submitting another play',async({page})=>{
+  const f=await setup(page,{readFailure:true});
+  await start(page,{name:''});await complete(page,'en');
+  const count=f.reads.length;
+  await page.click('#reload-ranking');
+  await expect.poll(()=>f.reads.length).toBeGreaterThan(count);
+  expect(f.submissions).toHaveLength(0);
+});
+
+test('named lost acknowledgement survives reload with the same consent and receipt ID',async({page})=>{
+  const f=await setup(page,{failure:true});
+  await page.locator('#language-select').selectOption('en');
+  await start(page);await complete(page,'en');
+  await expect(page.locator('#retry-score')).toBeVisible();
+  expect(f.submissions).toHaveLength(1);
+  const original={...f.submissions[0]};
+  await page.evaluate(()=>localStorage.setItem('iroAtePlayerName','Later name'));
+  f.network.failure=false;
+  await page.reload();
+  await expect(page.locator('#result-screen')).toBeVisible();
+  await expect.poll(()=>f.submissions.length).toBe(2);
+  expect(f.submissions[1]).toEqual(original);
+  await expect(page.locator('#ranking-status')).toHaveText(translate('ランキングに反映しました',{},'en'));
+  await page.locator('#language-select').selectOption('ja');
+  await page.locator('#reload-ranking').click();
+  expect(f.submissions).toHaveLength(2);
+  expect(f.errors).toEqual([]);
+});
+
+test('quota leaves the finalized score unsent, retry persists same UUID and reload never repeats acceptance',async({page})=>{
+ const f=await setup(page);await page.locator('#language-select').selectOption('en');await start(page);
+ await page.evaluate(()=>{window.originalSet=Storage.prototype.setItem;Storage.prototype.setItem=function(k,v){if(k.startsWith('iroate:score-pending:'))throw Error('quota');return originalSet.call(this,k,v)}});
+ await complete(page,'en');await expect(page.locator('#ranking-status')).toHaveText(translate('結果をこのブラウザに保存できません。画面を閉じずに再試行してください。',{},'en'));expect(f.submissions).toHaveLength(0);
+ const score=await page.locator('#final-time').textContent();await page.evaluate(()=>Storage.prototype.setItem=originalSet);await page.click('#retry-score');await expect.poll(()=>f.submissions.length).toBe(1);await expect(page.locator('#ranking-status')).toHaveText(translate('ランキングに反映しました',{},'en'));expect(await page.locator('#final-time').textContent()).toBe(score);
+ const payload=f.submissions[0],raw=await page.evaluate(id=>localStorage.getItem('iroate:score-pending:v1:'+id),payload.p_submission_id);expect(JSON.parse(raw).state).toBe('submitted');await page.reload();await expect(page.locator('#title-screen')).toBeVisible();expect(f.submissions).toHaveLength(1);expect(await page.evaluate(id=>localStorage.getItem('iroate:score-pending:v1:'+id),payload.p_submission_id)).toBe(raw);expect(f.errors).toEqual([]);
+});
+
+test('Safari composition 229 does not begin countdown',async({page})=>{const f=await setup(page);await page.locator('#player-name-input').fill('変換');await page.locator('#player-name-input').dispatchEvent('keydown',{key:'Enter',keyCode:229,isComposing:false});await expect(page.locator('#title-screen')).toBeVisible();expect(f.submissions).toHaveLength(0);expect(f.guestStarts).toHaveLength(0);});
+
+test('corrupt presentation is preserved without claiming a completed result',async({page})=>{const f=await setup(page,{failure:true});await page.locator('#language-select').selectOption('en');await start(page);await complete(page,'en');await expect(page.locator('#retry-score')).toBeVisible();const key='iroate:score-pending:v1:'+f.submissions[0].p_submission_id;const raw=await page.evaluate(key=>{const item=JSON.parse(localStorage.getItem(key));item.presentation.finishedTime=-4;item.presentation.missCount='bad';const raw=JSON.stringify(item);localStorage.setItem(key,raw);return raw},key);await page.reload();await expect(page.locator('#title-screen')).toBeVisible();await expect.poll(()=>f.submissions.length).toBe(2);expect(await page.evaluate(key=>JSON.parse(localStorage.getItem(key)).presentation.finishedTime,key)).toBe(-4);expect(f.errors).toEqual([]);});

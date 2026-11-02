@@ -1,4 +1,4 @@
-import {readdir,readFile,mkdtemp,writeFile,rm} from 'node:fs/promises';
+import {readdir,readFile,mkdtemp,writeFile,unlink,rmdir} from 'node:fs/promises';
 import {spawnSync} from 'node:child_process';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
@@ -28,4 +28,4 @@ try {
     if(result.status!==0) throw new Error(result.stderr);
   }
   console.log(`Syntax checked ${files.length} JavaScript files and ${n} inline scripts.`);
-} finally {await rm(scratch,{recursive:true,force:true});}
+} finally {for(const file of await readdir(scratch))await unlink(join(scratch,file));await rmdir(scratch);}

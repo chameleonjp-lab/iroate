@@ -1,6 +1,7 @@
 // Display text only; never use these strings for answer or score logic.
 export default {
   "messages": {
+    "結果をこのブラウザに保存できません。画面を閉じずに再試行してください。": "Impossibile salvare il risultato in questo browser. Non chiudere questa schermata e riprova.",
     "Xでシェアする": "Condividi su X",
     "文字の「色」か「意味」を{0}問当てるタイムアタック！": "Contro il tempo: rispondi a {0} domande sul colore o sul significato delle parole!",
     "最終タイム：{0}": "Tempo finale: {0}",
@@ -8,7 +9,7 @@ export default {
     "名前なしでも遊べます": "Puoi giocare senza nome",
     "入力すると名前と記録が公開され、ランキングに参加します。空欄では回数のみ計測します。": "Inserendo un nome, il nome e i risultati saranno pubblici in classifica. Lascia vuoto per contare solo le partite.",
     "名前は20文字以内で入力してください。": "Inserisci un nome di massimo 20 caratteri.",
-    "ランキング詳細": "Classifica completa",
+    "ランキング詳細": "Classifica",
     "ランキング上位30名": "Classifica: i migliori 30",
     "ランキングを読み込んでいます…": "Caricamento della classifica…",
     "ランキングを取得できませんでした。": "Impossibile caricare la classifica.",
@@ -101,7 +102,10 @@ export default {
     "効果音を切り替え": "Attiva o disattiva gli effetti sonori",
     "イロアテ ランキング連携エラー": "Errore di connessione alla classifica Iroate",
     "言語": "Lingua",
-    "ランキング記録はサーバーに保存されます。旧URLのブラウザ内の名前・自己ベストは、新URLへ自動では移りません。": "I record della classifica sono salvati sul server. Il nome e il record locale salvati nel browser al vecchio URL non vengono trasferiti automaticamente al nuovo URL."
+    "ランキング記録はサーバーに保存されます。旧URLのブラウザ内の名前・自己ベストは、新URLへ自動では移りません。": "I record della classifica sono salvati sul server. Il nome e il record locale salvati nel browser al vecchio URL non vengono trasferiti automaticamente al nuovo URL.",
+    "音量": "Volume",
+    "共有文をコピー": "Copia testo da condividere",
+    "再試行": "Riprova"
   },
   "colors": {
     "red": "Rosso",

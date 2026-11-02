@@ -32,9 +32,9 @@ for (const language of Object.keys(EXPECTED_COLOR_LABELS)) test(`${language}: bl
       return route.continue();
     }
     const rpc=url.pathname.split('/rpc/')[1];
-    if(rpc==='submit_score') {
+    if(rpc==='submit_score_once_shared_v1') {
       const body=route.request().postDataJSON();submissions.push(body);
-      return route.fulfill({json:[{accepted:true,result_display_name:body.p_display_name,result_first_score:body.p_score,result_best_score:body.p_score,result_play_count:1,is_first_play:true,is_new_best:true}]});
+      return route.fulfill({json:[{accepted:true,was_duplicate:false,result_normalized_name:body.p_display_name,result_display_name:body.p_display_name,result_first_score:body.p_score,result_best_score:body.p_score,result_play_count:1,is_first_play:true,is_new_best:true}]});
     }
     if(['get_first_try_ranking','get_best_score_ranking'].includes(rpc)) return route.fulfill({json:[]});
     return route.abort();

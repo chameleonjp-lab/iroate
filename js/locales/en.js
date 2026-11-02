@@ -1,6 +1,7 @@
 // Display text only; never use these strings for answer or score logic.
 export default {
   "messages": {
+    "結果をこのブラウザに保存できません。画面を閉じずに再試行してください。": "The result couldn't be saved in this browser. Keep this screen open and try again.",
     "Xでシェアする": "Share on X",
     "文字の「色」か「意味」を{0}問当てるタイムアタック！": "Race the clock: answer {0} questions about a word’s color or meaning!",
     "最終タイム：{0}": "Final time: {0}",
@@ -8,7 +9,7 @@ export default {
     "名前なしでも遊べます": "You can play without a name",
     "入力すると名前と記録が公開され、ランキングに参加します。空欄では回数のみ計測します。": "Entering a name makes your name and scores public on the leaderboard. Leave it blank to count plays only.",
     "名前は20文字以内で入力してください。": "Please use a name of up to 20 characters.",
-    "ランキング詳細": "Full leaderboard",
+    "ランキング詳細": "Leaderboard",
     "ランキング上位30名": "Leaderboard: top 30 players",
     "ランキングを読み込んでいます…": "Loading leaderboard…",
     "ランキングを取得できませんでした。": "Could not load the leaderboard.",
@@ -101,7 +102,10 @@ export default {
     "効果音を切り替え": "Toggle sound effects",
     "イロアテ ランキング連携エラー": "Iroate leaderboard connection error",
     "言語": "Language",
-    "ランキング記録はサーバーに保存されます。旧URLのブラウザ内の名前・自己ベストは、新URLへ自動では移りません。": "Leaderboard records are saved on the server. Names and personal bests saved in the browser at the old URL do not transfer automatically to the new URL."
+    "ランキング記録はサーバーに保存されます。旧URLのブラウザ内の名前・自己ベストは、新URLへ自動では移りません。": "Leaderboard records are saved on the server. Names and personal bests saved in the browser at the old URL do not transfer automatically to the new URL.",
+    "音量": "Volume",
+    "共有文をコピー": "Copy share text",
+    "再試行": "Retry"
   },
   "colors": {
     "red": "Red",

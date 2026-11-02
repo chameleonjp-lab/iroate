@@ -41,6 +41,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: test
     permissions:
+      contents: read
       pages: write
       id-token: write
     environment:
@@ -50,6 +51,13 @@ jobs:
     steps:
       - name: Configure Pages (Source must already be GitHub Actions)
         uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
+      - name: Reject an obsolete deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_BRANCH: main
+        run: |
+          current_sha=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/$TARGET_BRANCH" --jq '.object.sha')
+          test "$current_sha" = "$GITHUB_SHA"
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5
