@@ -17,11 +17,13 @@ export function openXShare(text, {openWindow, onBlocked}) {
     if (!popup) throw new Error('Popup unavailable');
     popup.opener = null;
     if (popup.opener !== null) throw new Error('Popup opener could not be detached');
-    const policy = popup.document.createElement('meta');
-    policy.name = 'referrer';
-    policy.content = 'no-referrer';
-    popup.document.head.append(policy);
-    popup.location.replace(buildXShareUrl(text));
+    const link = popup.document.createElement('a');
+    link.href = buildXShareUrl(text);
+    link.target = '_self';
+    link.rel = 'noreferrer';
+    link.referrerPolicy = 'no-referrer';
+    popup.document.body.append(link);
+    link.click();
     return true;
   } catch {
     try { popup?.close(); } catch { /* Result state is independent of popup. */ }
