@@ -8,7 +8,7 @@ assert.equal(version.canonical_url,'https://chameleonjp-lab.github.io/iroate/');
 const html=await readFile(root+'/index.html','utf8');
 assert.ok(html.includes(`name="chameleonjp-release" content="${version.commit}"`));
 assert.ok(html.includes(`rel="canonical" href="${version.canonical_url}"`));
-const expected=['.nojekyll','index.html','js','styles.css','vendor','version.json'];
+const expected=['.nojekyll','assets','index.html','js','styles.css','vendor','version.json'];
 assert.deepEqual((await readdir(root)).sort(),expected.sort());
 const visited=new Set();
 async function check(path) {
@@ -26,3 +26,11 @@ async function check(path) {
 await check(root+'/index.html');
 for(const lang of ['ja','en','es','pt-BR','zh-Hans','fr','de','ko','ru','it','zh-Hant','id','tr','vi','th']) assert.ok(visited.has(root+`/js/locales/${lang}.js`),lang);
 console.log(`Verified ${visited.size} linked assets including all 15 dictionaries; commit ${version.commit}`);
+
+const preview=await readFile(root+'/assets/social-preview.png');
+assert.equal(preview.subarray(0,8).toString('hex'),'89504e470d0a1a0a');
+assert.equal(preview.readUInt32BE(16),1200);assert.equal(preview.readUInt32BE(20),630);
+assert.ok(html.includes(`property="og:image" content="${version.canonical_url}assets/social-preview.png"`));
+
+assert.deepEqual(await readdir(root+'/assets'),['social-preview.png']);
+assert.deepEqual(preview,await readFile('assets/social-preview.png'));

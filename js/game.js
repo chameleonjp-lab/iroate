@@ -624,6 +624,7 @@ function buildShareText(resultLines = []) {
     t('イロアテ'),
     t('文字の「色」か「意味」を{0}問当てるタイムアタック！', {0: TOTAL_QUESTIONS}),
     ...resultLines,
+    '#イロアテ #ゲーム制作',
     PUBLIC_URL
   ].join('\n');
 }

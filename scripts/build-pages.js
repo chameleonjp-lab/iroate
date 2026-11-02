@@ -5,6 +5,8 @@ if(!/^[a-f0-9]{40}$/.test(commit)) throw new Error('Expected a full source commi
 await mkdir('.build-backups',{recursive:true});
 try { await rename('dist', `.build-backups/dist-${Date.now()}-${process.pid}`); } catch (error) { if(error.code !== 'ENOENT') throw error; }
 await mkdir('dist/vendor',{recursive:true});
+await mkdir('dist/assets',{recursive:true});
+await cp('assets/social-preview.png','dist/assets/social-preview.png');
 for(const file of ['index.html','styles.css','js']) await cp(file,`dist/${file}`,{recursive:true});
 await cp('node_modules/@supabase/supabase-js/dist/umd/supabase.js','dist/vendor/supabase.js');
 await cp('node_modules/@supabase/supabase-js/LICENSE','dist/vendor/supabase-LICENSE');

@@ -1,0 +1,8 @@
+// Deterministic vector composition of the actual game palette, prompt and 8 choices.
+// No player data, live gameplay, ranking result or external assets are used.
+import {COLORS} from '../js/engine.js';
+import {writeFileSync} from 'node:fs';
+const labels=['あか','あお','みどり','きいろ','むらさき','ピンク','くろ','オレンジ'];
+let svg='<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630"><rect width="1200" height="630" fill="#f6f3ed"/><g font-family="Noto Sans CJK JP, sans-serif"><text x="64" y="208" fill="#1f2933" font-size="76" font-weight="bold">イロアテ</text><text x="68" y="272" fill="#65718a" font-size="28">文字の意味？ 文字の色？</text><text x="68" y="321" fill="#1f2933" font-size="25">見分けて答える、20問。</text><rect x="68" y="373" width="342" height="52" rx="26" fill="#222"/><text x="239" y="408" text-anchor="middle" fill="white" font-size="23">20問スピード勝負</text><rect x="526" y="48" width="610" height="534" rx="30" fill="white" stroke="#e3dfd7"/><rect x="680" y="83" width="302" height="52" rx="26" fill="#fff3bf"/><text x="831" y="118" text-anchor="middle" fill="#1f2933" font-size="28" font-weight="bold">【意味】で答える</text><text x="831" y="262" text-anchor="middle" fill="#1e88e5" font-size="108" font-weight="bold">あか</text>';
+COLORS.forEach((c,i)=>{const x=550+(i%4)*142,y=332+Math.floor(i/4)*108;svg+=`<rect x="${x}" y="${y}" width="136" height="96" rx="20" fill="${c.hex}"/><text x="${x+68}" y="${y+58}" text-anchor="middle" fill="${['yellow','pink','orange'].includes(c.id)?'#1f2933':'white'}" font-size="23" font-weight="bold">${labels[i]}</text>`;});
+svg+='</g></svg>\n';writeFileSync('assets/social-preview.svg',svg);

@@ -111,7 +111,7 @@ test('Japanese X share uses exact 20-question copy, black and white links, and r
   await page.locator('#share-button').evaluate(el=>el.parentElement.style.removeProperty('opacity'));
   await visibleAction(page,'#share-button');
   await shareOnX(page,'#share-button');
-  expect(await page.evaluate(()=>window.__shares.at(-1))).toBe(intro+'\nhttps://chameleonjp-lab.github.io/iroate/');
+  expect(await page.evaluate(()=>window.__shares.at(-1))).toBe(intro+'\n#イロアテ #ゲーム制作\nhttps://chameleonjp-lab.github.io/iroate/');
   await start(page);await complete(page,'ja');
   await expect(page.locator('#ranking-status')).toHaveText('ランキングに反映しました');
   // Context menus and middle-click use href without invoking a normal click.
