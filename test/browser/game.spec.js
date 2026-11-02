@@ -56,13 +56,34 @@ async function setup(page,{failure=false,delay=false,storageBlocked=false,audioB
   return {errors,submissions,pending,guestStarts,reads,network};
 }
 
-async function shareOnX(page,selector) {
+async function visibleAction(page,selector,{minimum=44}={}) {
+  const link=page.locator(selector);
+  expect(await link.isVisible(),selector+' visible').toBe(true);
+  await link.scrollIntoViewIfNeeded();
+  const box=await link.evaluate(el=>{const r=el.getBoundingClientRect(),s=getComputedStyle(el),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);let opacity=1;for(let n=el;n;n=n.parentElement)opacity*=Number(getComputedStyle(n).opacity);return{width:r.width,height:r.height,opacity:String(opacity),pointerEvents:s.pointerEvents,hit:hit===el||el.contains(hit)};});
+  expect(box.width,selector+' width').toBeGreaterThanOrEqual(minimum);
+  expect(box.height,selector+' height').toBeGreaterThanOrEqual(minimum);
+  expect(box.opacity).not.toBe('0');expect(box.pointerEvents).not.toBe('none');expect(box.hit,selector+' center receives input').toBe(true);
+}
+async function captureShareLayout(page,phase,lang,testInfo) {
+  for(const viewport of [{width:402,height:874},{width:874,height:402}]) {
+    await page.setViewportSize(viewport);
+    await visibleAction(page,phase==='home'?'#share-button':'#copy-result-button');
+    await visibleAction(page,phase==='home'?'#other-games-link':'#ranking-detail-link');
+    await noOverflow(page);
+    const file=testInfo.outputPath(`${phase}-${lang}-${viewport.width}x${viewport.height}.png`);
+    await page.screenshot({path:file,fullPage:true});
+    await testInfo.attach(`${phase}-${lang}-${viewport.width}`,{path:file,contentType:'image/png'});
+  }
+}
+
+async function shareOnX(page,selector,{touch=false}={}) {
   const link=page.locator(selector);
   await expect(link).toHaveAttribute('target','_blank');
   await expect(link).toHaveAttribute('rel',/noopener/);
   await expect(link).toHaveAttribute('rel',/noreferrer/);
   const opened=page.waitForEvent('popup');
-  await link.click();
+  if(touch) await link.tap(); else await link.click();
   const popup=await opened;
   await popup.waitForLoadState('domcontentloaded');
   const url=new URL(popup.url());
@@ -82,8 +103,15 @@ test('Japanese X share uses exact 20-question copy, black and white links, and r
     await expect(page.locator(selector)).toHaveCSS('background-color','rgb(0, 0, 0)');
     await expect(page.locator(selector)).toHaveCSS('color','rgb(255, 255, 255)');
   }
+  await page.locator('#share-button').evaluate(el=>el.style.display='none');
+  await expect(visibleAction(page,'#share-button')).rejects.toThrow();
+  await page.locator('#share-button').evaluate(el=>el.style.removeProperty('display'));
+  await page.locator('#share-button').evaluate(el=>el.parentElement.style.opacity='0');
+  await expect(visibleAction(page,'#share-button')).rejects.toThrow();
+  await page.locator('#share-button').evaluate(el=>el.parentElement.style.removeProperty('opacity'));
+  await visibleAction(page,'#share-button');
   await shareOnX(page,'#share-button');
-  expect(await page.evaluate(()=>window.__shares.at(-1))).toBe(intro+'\nhttps://chameleonjp-lab.github.io/iroate/');
+  expect(await page.evaluate(()=>window.__shares.at(-1))).toBe(intro+'\n#イロアテ #ゲーム制作\nhttps://chameleonjp-lab.github.io/iroate/');
   await start(page);await complete(page,'ja');
   await expect(page.locator('#ranking-status')).toHaveText('ランキングに反映しました');
   // Context menus and middle-click use href without invoking a normal click.
@@ -203,6 +231,25 @@ for(const {id:lang} of SUPPORTED_LANGUAGES) test(`${lang}: every screen, ink/mea
   await shareOnX(page,'#copy-result-button');
   expect(f.submissions).toHaveLength(1);
   expect(f.errors).toEqual([]);
+});
+
+test.describe('mobile sharing visibility with all external traffic mocked',()=>{
+  test.use({isMobile:true,hasTouch:true,serviceWorkers:'block'});
+  for(const {id:lang} of SUPPORTED_LANGUAGES) test(`${lang}: touch targets and home/result screenshots`,async({page},testInfo)=>{
+    test.setTimeout(90000);
+    await page.context().routeWebSocket('**/*',socket=>socket.close());
+    const f=await setup(page);
+    await page.locator('#language-select').selectOption(lang);
+    await captureShareLayout(page,'home',lang,testInfo);
+    await shareOnX(page,'#share-button',{touch:true});
+    await start(page);await complete(page,lang);
+    const score=await page.locator('#final-time').textContent();
+    await captureShareLayout(page,'result',lang,testInfo);
+    await shareOnX(page,'#copy-result-button',{touch:true});
+    await expect(page.locator('#result-screen')).toBeVisible();
+    await expect(page.locator('#final-time')).toHaveText(score);
+    expect(f.submissions).toHaveLength(1);expect(f.errors).toEqual([]);
+  });
 });
 
 test('communication failure: error builder runs, results/retry survive; no real writes',async({page})=>{
