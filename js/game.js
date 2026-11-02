@@ -3,7 +3,7 @@ import { SUPPORTED_LANGUAGES, getLanguage, setLanguage, t, translate, colorName,
 import {createGuestPlayCounter} from './guest-plays.js';
 import { SoundEffects } from './sound-effects.js';
 import './score-queue.js';
-import {buildXShareUrl} from './x-share.js';
+import {buildXShareUrl, isPlainShareActivation, openXShare} from './x-share.js';
 
 const soundEffects = new SoundEffects();
 const languageSelect = document.getElementById('language-select');
@@ -671,7 +671,18 @@ function prepareResultShareOnX(event) {
   }
   // Refresh synchronously before the browser follows the link, including a
   // ranking reply that arrived after the result screen was first rendered.
+  activateShareOnX(event, copyResultButton);
+}
+
+function activateShareOnX(event, link) {
   updateShareLinks();
+  if (!isPlainShareActivation(event)) return;
+  event.preventDefault();
+  const text = new URL(link.href).searchParams.get('text');
+  openXShare(text, {
+    openWindow: (...args) => window.open(...args),
+    onBlocked: value => window.prompt(t('共有文をコピー'), value)
+  });
 }
 
 function fallbackCopyText(text) {
@@ -749,7 +760,7 @@ resultTitleButton.addEventListener("click", () => {
 });
 retireButton.addEventListener("click", retireGame);
 copyResultButton.addEventListener('click', prepareResultShareOnX);
-shareButton.addEventListener('click', updateShareLinks);
+shareButton.addEventListener('click', event => activateShareOnX(event, shareButton));
 playerNameInput.addEventListener('input', () => { const value=playerNameInput.value.trim(); if(value.length<=20) savePlayerName(value); });
 playerNameInput.addEventListener('keydown', event => {
   if (event.key === 'Enter' && !event.isComposing && event.keyCode !== 229) {event.preventDefault();beginStartFlow();}
@@ -845,8 +856,6 @@ void guestPlays.retry();
 const volumeControl = document.getElementById('sound-volume');
 volumeControl.value = String(soundEffects.volume * 100);
 volumeControl.addEventListener('input', () => { soundEffects.setVolume(Number(volumeControl.value) / 100); });
-document.getElementById('copy-home-share').addEventListener('click', () => copyTextToClipboard(buildShareText()));
-document.getElementById('copy-result-share').addEventListener('click', () => copyTextToClipboard(resultState ? buildResultCopyText() : buildShareText()));
 
 document.getElementById('reload-ranking').addEventListener('click', () => { void loadRankings(roundId); });
 

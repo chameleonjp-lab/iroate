@@ -25,6 +25,7 @@ async function setup(page,{failure=false,delay=false,storageBlocked=false,audioB
     const url=new URL(route.request().url());
     if(url.origin==='https://x.com'&&url.pathname==='/intent/tweet') {
       expect(route.request().method()).toBe('GET');
+      expect(route.request().headers()['referer']).toBeUndefined();
       const text=url.searchParams.get('text');
       await page.evaluate(value=>window.__shares.push(value),text);
       return route.fulfill({contentType:'text/html',body:'<!doctype html><title>Mock X composer</title>'});
@@ -74,7 +75,27 @@ async function captureShareLayout(page,phase,lang,testInfo) {
     const file=testInfo.outputPath(`${phase}-${lang}-${viewport.width}x${viewport.height}.png`);
     await page.screenshot({path:file,fullPage:true});
     await testInfo.attach(`${phase}-${lang}-${viewport.width}`,{path:file,contentType:'image/png'});
+    await shareOnX(page,phase==='home'?'#share-button':'#copy-result-button',{touch:true});
+    await blockedShareFallback(page,phase==='home'?'#share-button':'#copy-result-button');
   }
+}
+
+async function blockedShareFallback(page, selector) {
+  await expect(page.locator('#copy-home-share, #copy-result-share')).toHaveCount(0);
+  const link=page.locator(selector);
+  const text=new URL(await link.getAttribute('href')).searchParams.get('text');
+  const before=await page.evaluate(()=>window.__shares.length);
+  const result=await page.locator('#final-time').textContent();
+  await page.evaluate(()=>{window.__originalOpen=window.open;window.open=()=>null;});
+  const dialogPromise=page.waitForEvent('dialog');
+  const tapping=link.tap();
+  const dialog=await dialogPromise;
+  expect(dialog.type()).toBe('prompt');
+  expect(dialog.defaultValue()).toBe(text);
+  await dialog.dismiss();await tapping;
+  await page.evaluate(()=>{window.open=window.__originalOpen;delete window.__originalOpen;});
+  expect(await page.evaluate(()=>window.__shares.length)).toBe(before);
+  await expect(page.locator('#final-time')).toHaveText(result);
 }
 
 async function shareOnX(page,selector,{touch=false}={}) {
@@ -82,13 +103,17 @@ async function shareOnX(page,selector,{touch=false}={}) {
   await expect(link).toHaveAttribute('target','_blank');
   await expect(link).toHaveAttribute('rel',/noopener/);
   await expect(link).toHaveAttribute('rel',/noreferrer/);
+  const expectedText=new URL(await link.getAttribute('href')).searchParams.get('text');
+  const before=await page.evaluate(()=>window.__shares.length);
   const opened=page.waitForEvent('popup');
   if(touch) await link.tap(); else await link.click();
   const popup=await opened;
-  await popup.waitForLoadState('domcontentloaded');
+  await popup.waitForURL('https://x.com/intent/tweet**');
   const url=new URL(popup.url());
   expect(url.origin).toBe('https://x.com');
   expect(url.pathname).toBe('/intent/tweet');
+  expect(url.searchParams.get('text')).toBe(expectedText);
+  await expect.poll(()=>page.evaluate(()=>window.__shares.length)).toBe(before+1);
   expect(url.searchParams.get('text')).toContain('https://chameleonjp-lab.github.io/iroate/');
   await popup.close();
   expect(await page.evaluate(()=>window.__nativeShares)).toEqual([]);
@@ -241,11 +266,9 @@ test.describe('mobile sharing visibility with all external traffic mocked',()=>{
     const f=await setup(page);
     await page.locator('#language-select').selectOption(lang);
     await captureShareLayout(page,'home',lang,testInfo);
-    await shareOnX(page,'#share-button',{touch:true});
     await start(page);await complete(page,lang);
     const score=await page.locator('#final-time').textContent();
     await captureShareLayout(page,'result',lang,testInfo);
-    await shareOnX(page,'#copy-result-button',{touch:true});
     await expect(page.locator('#result-screen')).toBeVisible();
     await expect(page.locator('#final-time')).toHaveText(score);
     expect(f.submissions).toHaveLength(1);expect(f.errors).toEqual([]);
