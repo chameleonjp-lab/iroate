@@ -49,3 +49,9 @@ Pages Sourceは過去資料にworkflow確認済みとありますが、今回の
 **DB適用・読み戻し確認後にマージする既存条件は維持。** 実験場PR43のnormal receipt SQL適用/権限読み戻しを運用者が確認し、identity方式を本人判断。既存スコア/participantを独断で作り直しません。その後本人マージ→同commitの検証済みartifact→公開URL/配備SHA確認。Pages設定・保護・環境権限は今回変更しません。iPhoneでは名前変換確定/縦横/音0/ロック復帰/X取消/結果保持を短いプレイで確認してください。
 
 戻す場合は直前の安全なcommitへ戻すPRを作成し、同じ検証経路・本人マージで適用。既存スコア、匿名開始、receipt/tombstone、旧設定は削除しません。古いコードへ戻す場合も、新しい受理済み台帳を未送信へ変換しないでください。
+
+## 09:35 JST 受領応答の境界検証
+
+通常RPCのfirst/best/play_countはSQL integer（32bit符号付き）。JavaScript safe integerだけではSQLで返せない値まで成功扱いになるため、型の範囲と正のplay_countを確認します。イロアテの確定済み昇順ではbestが今回提出点を超える応答も拒否します。異常応答はキューを消さずpendingで保全し、再読込後も同じUUID・payloadで再送します。first score=0や過去の負数を一律に拒否せず、ゲーム上限の変更を過去記録へ遡及させません。名前・ID・採点・DB・公開設定は変更しません。
+
+追加15検査（欠落防御に加えint4境界、asc/desc方向、再読込・同一UUID再送、正常な0/負数）を含むunitと構文・ビルドを実行。結果はこの変更headのCIとPR本文へ記録し、旧head成功と区別します。iPhone実機・本番DB/公開の動作確認は本変更では行っていません。

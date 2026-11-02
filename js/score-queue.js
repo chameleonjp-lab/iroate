@@ -2,7 +2,9 @@
   'use strict';
   const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   const copy = value => JSON.parse(JSON.stringify(value));
-  function createScoreQueue({gameSlug, storage = null, send, onChange = () => {}, uuid = () => root.crypto.randomUUID()}) {
+  function createScoreQueue({gameSlug, scoreOrder = 'asc', storage = null, send, onChange = () => {}, uuid = () => root.crypto.randomUUID()}) {
+    if (!['asc','desc'].includes(scoreOrder)) throw new Error('Invalid score order');
+    const int4 = value => Number.isInteger(value) && value >= -2147483648 && value <= 2147483647;
     const prefix = gameSlug + ':score-pending:v1:';
     const memory = new Map(), conflicts = new Set();
     let operation = null;
@@ -81,7 +83,9 @@
             const receipt = response[0];
             if (receipt?.accepted === false) { const error=new Error('Score rejected');error.code='PT422';throw error; }
             if (receipt?.accepted !== true) throw new Error('Invalid score acknowledgement');
-            if (receipt.result_display_name !== item.payload.p_display_name || receipt.result_normalized_name !== item.payload.p_display_name || !Number.isSafeInteger(receipt.result_first_score) || !Number.isSafeInteger(receipt.result_best_score) || !Number.isSafeInteger(receipt.result_play_count) || receipt.result_play_count < 1 || !['was_duplicate','is_first_play','is_new_best'].every(k=>typeof receipt[k]==='boolean')) throw new Error('Invalid score acknowledgement');
+            if (receipt.result_display_name !== item.payload.p_display_name || receipt.result_normalized_name !== item.payload.p_display_name || !int4(receipt.result_first_score) || !int4(receipt.result_best_score) || !int4(receipt.result_play_count) || receipt.result_play_count < 1 || !['was_duplicate','is_first_play','is_new_best'].every(k=>typeof receipt[k]==='boolean')) throw new Error('Invalid score acknowledgement');
+            // The normal SQL receipt includes this submitted score in its best.
+            if (scoreOrder === 'asc' ? receipt.result_best_score > item.payload.p_score : receipt.result_best_score < item.payload.p_score) throw new Error('Invalid score acknowledgement');
             list();
             if(conflicts.has(item.id)){notify({...item,state:'conflict'});continue;}
             item.state='submitted';

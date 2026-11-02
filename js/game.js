@@ -34,6 +34,7 @@ const CLIENT_VERSION = "iroate-ranking-v1";
 const PUBLIC_URL = "https://chameleonjp-lab.github.io/iroate/";
 const scoreQueue = globalThis.CommonScoreQueue.createScoreQueue({
   gameSlug: GAME_SLUG,
+  scoreOrder: 'asc',
   storage: (() => { try { return localStorage; } catch { return null; } })(),
   send: async payload => {
     const {data, error} = await rankingRpc(getSupabaseClient(), 'submit_score_once_shared_v1', payload);
