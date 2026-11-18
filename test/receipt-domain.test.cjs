@@ -13,7 +13,8 @@ for (const scoreOrder of ['asc','desc']) {
   const bad = [
     ['first overflow',{result_first_score:2147483648}], ['first underflow',{result_first_score:-2147483649}],
     ['best overflow',{result_best_score:2147483648}], ['best underflow',{result_best_score:-2147483649}],
-    ['count overflow',{result_play_count:2147483648}], ['wrong direction',{result_best_score:scoreOrder==='asc'?101:99}]
+    ['count overflow',{result_play_count:2147483648}],
+    ['best worse than first',{result_first_score:scoreOrder==='asc'?50:150,result_best_score:100}], ['wrong direction',{result_best_score:scoreOrder==='asc'?101:99}]
   ];
   for (const [label, overrides] of bad) test(`${scoreOrder}: ${label} stays pending across reload and retries the same play`, async()=>{
     const disk=storage(), calls=[]; let successes=0;
@@ -21,7 +22,7 @@ for (const scoreOrder of ['asc','desc']) {
     const q=createScoreQueue({...options,send:async p=>{calls.push(p);return ack(overrides)}});
     q.enqueue(q.capture('Alice','v1'),100); await q.drain();
     assert.equal(q.list().length,1);assert.equal(q.list()[0].state,'pending');assert.equal(successes,0);
-    const restored=createScoreQueue({...options,send:async p=>{calls.push(p);return ack({was_duplicate:true})}});
+    const restored=createScoreQueue({...options,send:async p=>{calls.push(p);return ack({was_duplicate:true,...(label==='best worse than first'?{result_first_score:overrides.result_first_score,result_best_score:overrides.result_first_score}:{})})}});
     await restored.drain(); assert.equal(restored.list().length,0);assert.equal(successes,1);assert.deepEqual(calls[1],calls[0]);
   });
   test(`${scoreOrder}: signed historical first and zero remain valid`,async()=>{
