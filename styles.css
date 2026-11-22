@@ -607,6 +607,18 @@ button:disabled {
   align-items: center;
   justify-content: center;
 }
+body:has(#title-screen.screen-active) .preferences {
+  max-width: none;
+  justify-content: flex-start;
+  padding-left: max(16px, env(safe-area-inset-left));
+  padding-right: max(16px, env(safe-area-inset-right));
+}
+.language-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+}
 .preferences select, .preferences button {
   max-width: 100%;
   min-height: 44px;

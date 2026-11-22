@@ -207,6 +207,26 @@ async function translated(page,lang) {
   }
 }
 
+
+test('home language picker stays in the top-left safe area on wide and narrow screens', async ({page}) => {
+  await setup(page);
+  for (const viewport of [{width:1280,height:800},{width:390,height:844},{width:320,height:568},{width:844,height:390}]) {
+    await page.setViewportSize(viewport);
+    const label = page.locator('label[for="language-select"]');
+    const picker = page.locator('#language-select');
+    await expect(page.locator('#title-screen')).toBeVisible();
+    await expect(picker).toBeVisible();
+    await expect(picker.locator('option')).toHaveCount(15);
+    const labelBox = await label.boundingBox();
+    const pickerBox = await picker.boundingBox();
+    expect(labelBox.x, 'language label stays left-aligned').toBeLessThanOrEqual(24);
+    expect(pickerBox.y, 'language picker starts in the first row').toBeLessThanOrEqual(24);
+    expect(pickerBox.x).toBeGreaterThanOrEqual(labelBox.x + labelBox.width);
+    expect(pickerBox.height).toBeGreaterThanOrEqual(44);
+    await noOverflow(page);
+  }
+});
+
 for(const {id:lang} of SUPPORTED_LANGUAGES) test(`${lang}: every screen, ink/meaning, integer score, share, narrow layout`,async({page})=>{
   const f=await setup(page);
   await page.setViewportSize({width:320,height:568});

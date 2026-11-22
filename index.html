@@ -23,8 +23,10 @@
 </head>
 <body>
   <header class="preferences">
-    <label for="language-select" data-i18n>言語</label>
-    <select id="language-select" aria-label="言語を選択" data-i18n-attrs="aria-label"></select>
+    <div class="language-control">
+      <label for="language-select" data-i18n>言語</label>
+      <select id="language-select" aria-label="言語を選択" data-i18n-attrs="aria-label"></select>
+    </div>
     <button id="sound-toggle" type="button" aria-pressed="true" aria-label="効果音を切り替え" data-i18n-attrs="aria-label"><span aria-hidden="true" id="sound-icon">🔊</span> <span id="sound-label" data-i18n>効果音 オン</span></button>
   <label class="volume-control"><span data-i18n>音量</span><input id="sound-volume" type="range" min="0" max="100" step="1" value="100" aria-label="音量" data-i18n-attrs="aria-label"></label>
   </header>
