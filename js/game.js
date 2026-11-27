@@ -528,6 +528,8 @@ function startGameAfterCountdown() {
   startTime = performance.now();
   soundEffects.play("start");
   timerFrameId = requestAnimationFrame(updateTimer);
+  void import(/* @vite-ignore */ "https://chameleonjp-lab.github.io/chameleonjp_lab/play-start.js").then(module => module.recordPlayStart("iroate")).catch(() => {});
+
   if (!currentPlayerName) {
     guestStartId = guestPlays.record();
     if (!guestStartId) guestCountStatus = 'failed';
